@@ -26,7 +26,7 @@ export const authMiddleware = (allowedRoles = []) => {
         });
       }
 
-      req.user = decoded;
+      req.user = { ...decoded, id: decoded.userId };
       next();
     } catch (err) {
       return res.status(401).json({

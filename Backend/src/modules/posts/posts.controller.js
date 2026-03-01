@@ -15,6 +15,8 @@ export const createPost = async (req, res) => {
       content: req.body.content,
       type: req.body.type || "text",
       authorId: req.user.userId,
+      imageUrl: req.body.imageUrl || null,
+      videoUrl: req.body.videoUrl || null,
       tags: req.body.tags || [],
     };
 

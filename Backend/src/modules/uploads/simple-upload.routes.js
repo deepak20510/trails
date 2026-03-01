@@ -1,14 +1,26 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 import { authMiddleware } from "../../middleware/auth.middleware.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOAD_DIR = path.join(__dirname, "../../../storage/materials");
+
+// Ensure upload directory exists
+try {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+} catch (err) {
+  console.error("Failed to create upload directory:", err);
+}
 
 const router = express.Router();
 
 // Configure multer for simple file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "storage/materials/");
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);

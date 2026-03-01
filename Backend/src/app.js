@@ -4,6 +4,10 @@ import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import postRoutes from "./modules/posts/posts.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import trainerRoutes from "./modules/trainer/trainer.routes.js";
@@ -35,7 +39,7 @@ app.use(
       "http://localhost:5174",
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
@@ -65,10 +69,11 @@ app.use(auditMiddleware);
 
 /* ================= PUBLIC STATIC FILES ================= */
 
-// Serve uploaded materials publicly
+// Serve uploaded materials publicly (use absolute path for reliability)
+const materialsPath = path.join(__dirname, "../storage/materials");
 app.use(
   "/materials",
-  express.static("storage/materials", {
+  express.static(materialsPath, {
     setHeaders: (res) => {
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("Content-Disposition", "inline");
@@ -111,6 +116,19 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/material", materialRoutes);
 app.use("/api/material-rating", materialRatingRoutes);
 app.use("/api/reports", reportRoutes);
+
+/* ================= SERVE FRONTEND (Production) ================= */
+
+if (process.env.NODE_ENV === "production") {
+  const clientBuild = path.join(__dirname, "../../client/dist");
+  app.use(express.static(clientBuild));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/materials") || req.path === "/health") {
+      return next();
+    }
+    res.sendFile(path.join(clientBuild, "index.html"));
+  });
+}
 
 /* ================= ERROR HANDLER ================= */
 

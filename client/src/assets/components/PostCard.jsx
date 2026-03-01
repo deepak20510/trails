@@ -7,7 +7,8 @@ import {
   MoreHorizontal,
   ThumbsUp,
   User,
-  Send
+  Send,
+  FileText,
 } from "lucide-react";
 
 export default function PostCard({ 
@@ -111,17 +112,34 @@ export default function PostCard({
         </div>
       </div>
 
-      {/* Post Image */}
+      {/* Post Image or PDF */}
       {post.imageUrl && (
         <div className="px-4 pb-3">
-          <img
-            src={post.imageUrl}
-            alt="Post content"
-            className="w-full rounded-lg object-cover max-h-96"
-            onError={(e) => {
-              e.currentTarget.src = "https://via.placeholder.com/800x400?text=Image+Unavailable";
-            }}
-          />
+          {post.imageUrl.toLowerCase().endsWith(".pdf") ||
+          post.type === "article" ? (
+            <a
+              href={post.imageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 p-4 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-200 transition-colors"
+            >
+              <FileText className="w-12 h-12 text-red-500 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-gray-900">PDF Document</p>
+                <p className="text-sm text-blue-600">Click to open</p>
+              </div>
+            </a>
+          ) : (
+            <img
+              src={post.imageUrl}
+              alt="Post content"
+              className="w-full rounded-lg object-cover max-h-96"
+              onError={(e) => {
+                e.currentTarget.src =
+                  "https://via.placeholder.com/800x400?text=Image+Unavailable";
+              }}
+            />
+          )}
         </div>
       )}
 

@@ -25,7 +25,7 @@ router.get("/:postId", getPostById);
 
 // Protected routes - trainers and institutions only
 router.post(
-  "/posts",
+  "/",
   authMiddleware(["TRAINER", "INSTITUTION"]),
   validate(createPostSchema, "body"),
   createPost,

@@ -14,6 +14,7 @@ import {
   Send,
   ThumbsUp,
   User,
+  FileText,
 } from "lucide-react";
 import PostCard from "./PostCard";
 
@@ -215,12 +216,13 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
         }
       }
 
+      const isPdf = selectedImage?.type === "application/pdf";
       const postData = {
         content: postText,
-        type: imageUrl ? "image" : "text",
+        type: imageUrl ? (isPdf ? "article" : "image") : "text",
       };
 
-      // Only send imageUrl if it's a valid URL string
+      // Only send imageUrl if it's a valid URL string (stores file URL for both images and PDFs)
       if (imageUrl && typeof imageUrl === "string") {
         postData.imageUrl = imageUrl;
       }
@@ -244,10 +246,7 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    if (
-      file &&
-      (file.type.startsWith("image/") || file.type === "application/pdf")
-    ) {
+    if (file && file.type.startsWith("image/")) {
       setSelectedImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -255,8 +254,20 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
       };
       reader.readAsDataURL(file);
     } else {
-      alert("Only images and PDFs are supported");
+      alert("Only images are supported");
     }
+    e.target.value = "";
+  };
+
+  const handlePdfUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === "application/pdf") {
+      setSelectedImage(file);
+      setImagePreview("pdf"); // Use "pdf" as sentinel for PDF preview
+    } else {
+      alert("Only PDF files are supported");
+    }
+    e.target.value = "";
   };
 
   const removeImage = () => {
@@ -498,20 +509,42 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
                 placeholder="What do you want to talk about?"
               />
 
-              {/* Image Preview */}
+              {/* Image / PDF Preview */}
               {imagePreview && (
                 <div className="mt-4 relative">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full rounded-lg max-h-64 object-cover"
-                  />
-                  <button
-                    onClick={removeImage}
-                    className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                  >
-                    <X size={16} />
-                  </button>
+                  {imagePreview === "pdf" && selectedImage ? (
+                    <div className="flex items-center gap-3 p-4 bg-gray-100 rounded-lg border border-gray-200">
+                      <FileText className="w-12 h-12 text-red-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">
+                          {selectedImage.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          PDF document
+                        </p>
+                      </div>
+                      <button
+                        onClick={removeImage}
+                        className="text-gray-500 hover:text-red-600 p-1"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                  ) : (
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full rounded-lg max-h-64 object-cover"
+                    />
+                  )}
+                  {imagePreview !== "pdf" && (
+                    <button
+                      onClick={removeImage}
+                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -542,22 +575,16 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
                   <span className="text-sm">Photo</span>
                 </label>
 
-                <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4"
-                    />
-                  </svg>
-                  <span className="text-sm">Video</span>
-                </button>
+                <label className="flex items-center gap-2 text-gray-600 hover:text-blue-600 cursor-pointer transition-colors">
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handlePdfUpload}
+                    className="hidden"
+                  />
+                  <FileText className="w-5 h-5" />
+                  <span className="text-sm">PDF</span>
+                </label>
 
                 <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
                   <svg

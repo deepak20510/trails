@@ -31,8 +31,9 @@ export default function TrainerSearch() {
     try {
       const response = await ApiService.searchTrainers(filters);
       if (response.success) {
-        setTrainers(response.data.trainers);
-        setPagination(response.data.pagination);
+        // Backend returns data (array) and meta (pagination)
+        setTrainers(response.data || []);
+        setPagination(response.meta || null);
       }
     } catch (error) {
       console.error('Search failed:', error);

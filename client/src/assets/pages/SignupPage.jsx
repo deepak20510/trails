@@ -108,7 +108,13 @@ export default function SignupPage() {
       // Always include required fields
       signupData.email = formData.email;
       signupData.password = formData.password;
-      signupData.role = selectedType; // Remove toUpperCase() - send the enum value directly
+      // Backend expects STUDENT | TRAINER | INSTITUTION (uppercase)
+      const roleMap = {
+        [USER_TYPES.STUDENT]: "STUDENT",
+        [USER_TYPES.TRAINER]: "TRAINER",
+        [USER_TYPES.INSTITUTE]: "INSTITUTION",
+      };
+      signupData.role = roleMap[selectedType] || "STUDENT";
 
       // Only include optional fields if they have values
       if (formData.phone && formData.phone.trim()) {

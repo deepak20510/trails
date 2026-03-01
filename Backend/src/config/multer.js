@@ -1,6 +1,17 @@
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import crypto from "crypto";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOAD_DIR = path.join(__dirname, "../../storage/materials");
+
+try {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+} catch (err) {
+  console.warn("Could not create materials upload dir:", err.message);
+}
 
 const allowedTypes = [
   "application/pdf",
@@ -17,7 +28,7 @@ const fileFilter = (req, file, cb) => {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "storage/materials"); // change from uploads
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueName = crypto.randomUUID();

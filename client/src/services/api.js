@@ -1,4 +1,6 @@
-const API_BASE = "http://localhost:5000/api/v1";
+// Use proxy in dev (Vite proxies /api to backend), or explicit URL in production
+const API_BASE =
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "" : "http://localhost:5000") + "/api/v1";
 
 class ApiService {
   /* ================= CORE REQUEST ================= */
@@ -15,13 +17,18 @@ class ApiService {
       ...options,
     };
 
+    // Don't set Content-Type for FormData (browser sets it with boundary)
+    if (options.body instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }
+
     try {
       const response = await fetch(`${API_BASE}${endpoint}`, config);
 
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.message || `Error ${response.status}`);
+        throw new Error(data.message || data.error || `Error ${response.status}`);
       }
 
       return data;
@@ -92,6 +99,19 @@ class ApiService {
     });
   }
 
+  /* ================= FILE UPLOAD ================= */
+  // For post attachments, profile images, etc. Uses /upload/upload
+
+  static async uploadFile(file, title = "Untitled") {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", title);
+    return this.request("/upload/upload", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
   /* ================= TRAINER ================= */
   // ⚠ Using singular because backend uses /trainer
 
@@ -114,7 +134,19 @@ class ApiService {
   }
 
   static async searchTrainers(filters = {}) {
-    const params = new URLSearchParams(filters).toString();
+    // Map frontend filter names to backend query params
+    const query = {
+      skill: filters.skills || filters.skill,
+      location: filters.location,
+      minExp: filters.minExperience ?? filters.minExp,
+      maxExp: filters.maxExperience ?? filters.maxExp,
+      page: filters.page ?? 1,
+      limit: filters.limit ?? 12,
+      sort: filters.sort ?? "newest",
+    };
+    const params = new URLSearchParams(
+      Object.fromEntries(Object.entries(query).filter(([, v]) => v != null && v !== ""))
+    ).toString();
     return this.request(`/trainer/search${params ? `?${params}` : ""}`);
   }
 
@@ -142,65 +174,135 @@ class ApiService {
     });
   }
 
-  /* ================= MATERIAL ================= */
-  // ⚠ Backend uses /material not /materials
+  /* ================= REQUESTS ================= */
+  // Backend: POST /, PATCH /:id/respond, PATCH /:id/complete
 
-  static async getMyMaterials() {
-    return this.request("/material/my");
-  }
-
-  static async uploadMaterial(data) {
-    return this.request("/material", {
+  static async createRequest(data) {
+    return this.request("/requests", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  static async getMaterial(id) {
-    return this.request(`/material/${id}`);
-  }
-
-  static async updateMaterial(id, data) {
-    return this.request(`/material/${id}`, {
-      method: "PUT",
+  static async respondToRequest(requestId, data) {
+    return this.request(`/requests/${requestId}/respond`, {
+      method: "PATCH",
       body: JSON.stringify(data),
     });
   }
 
-  static async deleteMaterial(id) {
-    return this.request(`/material/${id}`, {
+  static async completeRequest(requestId) {
+    return this.request(`/requests/${requestId}/complete`, {
+      method: "PATCH",
+    });
+  }
+
+  /* ================= REVIEWS ================= */
+
+  static async createReview(data) {
+    return this.request("/reviews", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  /* ================= MATERIAL ================= */
+  // Backend: POST /material/upload (multipart), GET /material/:trainerId
+
+  static async getTrainerMaterials(trainerId) {
+    return this.request(`/material/${trainerId}`);
+  }
+
+  static async uploadMaterial(file, title) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("title", title);
+    return this.request("/material/upload", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  /* ================= MATERIAL RATING ================= */
+  // Backend: POST /, PATCH /:ratingId, DELETE /:ratingId, GET /material/:materialId, GET /my-ratings
+
+  static async getMyMaterialRatings() {
+    return this.request("/material-rating/my-ratings");
+  }
+
+  static async rateMaterial(materialId, rating, comment) {
+    return this.request("/material-rating", {
+      method: "POST",
+      body: JSON.stringify({ materialId, rating, comment }),
+    });
+  }
+
+  static async updateMaterialRating(ratingId, rating, comment) {
+    return this.request(`/material-rating/${ratingId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ rating, comment }),
+    });
+  }
+
+  static async deleteMaterialRating(ratingId) {
+    return this.request(`/material-rating/${ratingId}`, {
       method: "DELETE",
     });
   }
 
-  /* ================= ADMIN ================= */
-
-  static async getAdminStats() {
-    return this.request("/admin/stats");
+  static async getMaterialRatings(materialId, query = {}) {
+    const params = new URLSearchParams(query).toString();
+    return this.request(`/material-rating/material/${materialId}${params ? `?${params}` : ""}`);
   }
+
+  /* ================= REPORTS (Admin) ================= */
+  // Backend: GET /reports, PATCH /reports/:id, POST /reports/suspend/:userId, POST /reports/unsuspend/:userId
 
   static async getReports(filters = {}) {
     const params = new URLSearchParams(filters).toString();
-    return this.request(`/admin/reports${params ? `?${params}` : ""}`);
+    return this.request(`/reports${params ? `?${params}` : ""}`);
   }
 
-  static async resolveReport(id, data) {
-    return this.request(`/admin/reports/${id}/resolve`, {
-      method: "POST",
+  static async updateReport(reportId, data) {
+    return this.request(`/reports/${reportId}`, {
+      method: "PATCH",
       body: JSON.stringify(data),
     });
   }
 
-  static async suspendUser(id) {
-    return this.request(`/admin/users/${id}/suspend`, {
+  static async suspendUser(userId) {
+    return this.request(`/reports/suspend/${userId}`, {
       method: "POST",
     });
   }
 
-  static async unsuspendUser(id) {
-    return this.request(`/admin/users/${id}/unsuspend`, {
+  static async unsuspendUser(userId) {
+    return this.request(`/reports/unsuspend/${userId}`, {
       method: "POST",
     });
+  }
+
+  /* ================= OPTIONAL (not in backend - return empty to avoid errors) ================= */
+
+  static async getPopularSkills(limit = 10) {
+    try {
+      const trainers = await this.searchTrainers({ limit: 50 });
+      const skills = new Set();
+      (trainers.data || []).forEach((t) => (t.skills || []).forEach((s) => skills.add(s)));
+      return { success: true, data: [...skills].slice(0, limit) };
+    } catch {
+      return { success: true, data: [] };
+    }
+  }
+
+  static async getPopularLocations(limit = 10) {
+    try {
+      const trainers = await this.searchTrainers({ limit: 50 });
+      const locations = [...new Set((trainers.data || []).map((t) => t.location).filter(Boolean))];
+      return { success: true, data: locations.slice(0, limit) };
+    } catch {
+      return { success: true, data: [] };
+    }
   }
 }
 
