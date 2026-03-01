@@ -13,11 +13,19 @@ export const authMiddleware = (allowedRoles = []) => {
 
     const token = authHeader.split(" ")[1];
 
+    // Debug logging
+    console.log("JWT_SECRET:", process.env.JWT_SECRET ? "Set" : "NOT SET");
+    console.log("JWT_ISSUER:", process.env.JWT_ISSUER || "NOT SET");
+    console.log("JWT_AUDIENCE:", process.env.JWT_AUDIENCE || "NOT SET");
+    console.log("Token received:", token ? "YES" : "NO");
+
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET, {
-        issuer: "trainer-platform",
-        audience: "trainer-users",
+        issuer: process.env.JWT_ISSUER || "trainer-platform",
+        audience: process.env.JWT_AUDIENCE || "trainer-users",
       });
+
+      console.log("Token decoded successfully:", decoded.role, decoded.userId);
 
       if (allowedRoles.length && !allowedRoles.includes(decoded.role)) {
         return res.status(403).json({
@@ -29,9 +37,11 @@ export const authMiddleware = (allowedRoles = []) => {
       req.user = { ...decoded, id: decoded.userId };
       next();
     } catch (err) {
+      console.log("JWT verification failed:", err.message);
       return res.status(401).json({
         success: false,
         message: "Invalid token",
+        error: err.message,
       });
     }
   };

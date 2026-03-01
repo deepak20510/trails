@@ -86,6 +86,63 @@ export const getPostsService = async (filters = {}) => {
   };
 };
 
+/* ================= GET MY POSTS ================= */
+
+export const getMyPostsService = async (userId, filters = {}) => {
+  const validatedFilters = getPostsSchema.parse(filters);
+
+  const { page, limit, sortBy, sortOrder } = validatedFilters;
+
+  const skip = (page - 1) * limit;
+
+  const where = {
+    authorId: userId,
+    isActive: true,
+  };
+
+  const posts = await client.post.findMany({
+    where,
+    include: {
+      author: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          trainerProfile: {
+            select: {
+              bio: true,
+            },
+          },
+          institutionProfile: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      [sortBy]: sortOrder,
+    },
+    skip,
+    take: limit,
+  });
+
+  const total = await client.post.count({ where });
+
+  return {
+    posts,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: total === 0 ? 0 : Math.ceil(total / limit),
+    },
+  };
+};
+
 /* ================= GET POST BY ID ================= */
 
 export const getPostByIdService = async (postId) => {

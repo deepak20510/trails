@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import PostCard from "./PostCard";
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
   const { user } = useAuth();
 
@@ -43,12 +44,37 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
     loadPosts();
   }, []);
 
+  // Listen for custom events to open create post modal
+  useEffect(() => {
+    const handleOpenCreatePostModal = () => {
+      setIsModalOpen(true);
+    };
+
+    window.addEventListener("openCreatePostModal", handleOpenCreatePostModal);
+
+    return () => {
+      window.removeEventListener(
+        "openCreatePostModal",
+        handleOpenCreatePostModal,
+      );
+    };
+  }, []);
+
   const loadPosts = async () => {
     setLoading(true);
     try {
       const response = await ApiService.getPosts?.();
       if (response?.success) {
-        setPosts(response.data || []);
+        const normalizedPosts = (response.data || []).map((post) => ({
+          ...post,
+          imageUrl: post.imageUrl
+            ? post.imageUrl.startsWith("http")
+              ? post.imageUrl
+              : `${BACKEND_URL}${post.imageUrl}`
+            : null,
+        }));
+
+        setPosts(normalizedPosts);
       } else {
         // Add mock data for demonstration
         setPosts([
@@ -180,15 +206,13 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
   const handlePostSubmit = async () => {
     if ((!postText.trim() && !selectedImage) || isSubmitting) return;
 
-    // Check if user is authenticated
     if (!user?.id) {
-      alert("Please log in to create posts");
+      alert("Please log in");
       return;
     }
 
-    // Check if user has permission to create posts (only TRAINER and INSTITUTION)
-    if (!["TRAINER", "INSTITUTION"].includes(user?.role)) {
-      alert("Only trainers and institutions can create posts");
+    if (!["TRAINER", "INSTITUTION"].includes(user.role)) {
+      alert("Only trainers and institutions can post");
       return;
     }
 
@@ -197,48 +221,67 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
     try {
       let imageUrl = null;
 
-      // Upload file if selected
-      if (selectedImage && selectedImage instanceof File) {
-        try {
-          const title = postText.trim()
-            ? `Post Attachment - ${postText.substring(0, 20)}`
-            : "Untitled Post";
-          const uploadResponse = await ApiService.uploadFile(
-            selectedImage,
-            title,
-          );
-          if (uploadResponse.success) {
-            imageUrl = `/materials/${uploadResponse.data.filename}`;
-          }
-        } catch (uploadError) {
-          console.error("File upload failed:", uploadError);
-          alert("Failed to upload image. Post will be created without image.");
+      /* ========= FILE UPLOAD ========= */
+      if (selectedImage instanceof File) {
+        const title = postText.trim() ? `Post-${Date.now()}` : "Post File";
+
+        const uploadResponse = await ApiService.uploadFile(
+          selectedImage,
+          title,
+        );
+
+        // ✅ STOP if upload fails
+        if (!uploadResponse?.success) {
+          throw new Error("Upload failed");
         }
+
+        const BACKEND_URL =
+          import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+        imageUrl = `${BACKEND_URL}/materials/${uploadResponse.data.filename}`;
       }
 
+      /* ========= POST DATA ========= */
+
       const isPdf = selectedImage?.type === "application/pdf";
+
+      const cleanedContent = postText.trim();
+
+      if (!cleanedContent && !imageUrl) {
+        throw new Error("Post cannot be empty");
+      }
+
       const postData = {
-        content: postText,
+        content: cleanedContent || " ",
         type: imageUrl ? (isPdf ? "article" : "image") : "text",
       };
 
-      // Only send imageUrl if it's a valid URL string (stores file URL for both images and PDFs)
-      if (imageUrl && typeof imageUrl === "string") {
+      if (imageUrl) {
         postData.imageUrl = imageUrl;
       }
 
-      const response = await ApiService.createPost?.(postData);
+      /* ========= CREATE POST ========= */
 
-      if (response?.success) {
-        setPostText("");
-        setSelectedImage(null);
-        setImagePreview(null);
-        setIsModalOpen(false);
-        await loadPosts();
+      const response = await ApiService.createPost(postData);
+
+      if (!response?.success) {
+        throw new Error("Post creation failed");
       }
+
+      /* ========= RESET ========= */
+
+      setPostText("");
+      setSelectedImage(null);
+      setImagePreview(null);
+      setIsModalOpen(false);
+
+      await loadPosts();
+
+      // Refresh posts in profile page if trainer is viewing their own profile
+      window.dispatchEvent(new CustomEvent("refreshPosts"));
     } catch (error) {
       console.error("Failed to create post:", error);
-      alert("Failed to create post. Please try again.");
+      alert(error.message || "Failed to create post");
     } finally {
       setIsSubmitting(false);
     }
@@ -519,9 +562,7 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
                         <p className="font-medium text-gray-900 truncate">
                           {selectedImage.name}
                         </p>
-                        <p className="text-sm text-gray-500">
-                          PDF document
-                        </p>
+                        <p className="text-sm text-gray-500">PDF document</p>
                       </div>
                       <button
                         onClick={removeImage}

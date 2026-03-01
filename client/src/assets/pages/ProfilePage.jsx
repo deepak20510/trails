@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../../context/ThemeContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import EditProfileModal from "../components/EditProfileModal";
+import PostCard from "../components/PostCard";
+import ApiService from "../../services/api";
 import {
   ArrowLeft,
   MapPin,
@@ -26,12 +28,89 @@ import { DASHBOARD_CONFIG, USER_TYPES } from "../../config/dashboardConfig";
 export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const { id } = useParams();
+  const location = useLocation();
   const config = DASHBOARD_CONFIG[userType];
   const profile = config.leftSidebar.profile;
 
-  // State for edit modal and editable data
+  // State for edit modal and posts
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editableData, setEditableData] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+
+  const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  // Load posts when component mounts, ID changes, or when navigating back to profile
+  useEffect(() => {
+    if (userType === USER_TYPES.TRAINER || userType === USER_TYPES.INSTITUTE) {
+      loadPosts();
+    }
+  }, [id, userType, location.key]); // location.key triggers on navigation
+
+  // Listen for custom event to refresh posts (called from feed after posting)
+  useEffect(() => {
+    const handleRefreshPosts = () => {
+      if (
+        userType === USER_TYPES.TRAINER ||
+        userType === USER_TYPES.INSTITUTE
+      ) {
+        loadPosts();
+      }
+    };
+
+    // Add event listener
+    window.addEventListener("refreshPosts", handleRefreshPosts);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("refreshPosts", handleRefreshPosts);
+    };
+  }, [userType, id]);
+
+  const loadPosts = async () => {
+    try {
+      setPostsLoading(true);
+      let response;
+
+      if (id) {
+        // Load posts for specific trainer by ID
+        response = await ApiService.getPosts({
+          authorId: id,
+          page: 1,
+          limit: 10,
+        });
+      } else {
+        // Load current user's posts (for own profile)
+        response = await ApiService.getMyPosts({ page: 1, limit: 10 });
+      }
+
+      if (response.success) {
+        // Normalize image URLs
+        const normalizedPosts = (response.data || []).map((post) => ({
+          ...post,
+          imageUrl: post.imageUrl
+            ? post.imageUrl.startsWith("http")
+              ? post.imageUrl
+              : `${BACKEND_URL}${post.imageUrl}`
+            : null,
+        }));
+        setPosts(normalizedPosts);
+      }
+    } catch (error) {
+      console.error("Failed to load posts:", error);
+    } finally {
+      setPostsLoading(false);
+    }
+  };
+
+  const handleDeletePost = (postId) => {
+    setPosts(posts.filter((post) => post.id !== postId));
+  };
+
+  const handleEditPost = (post) => {
+    console.log("Edit post:", post);
+  };
 
   // Profile data based on user type
   const getProfileData = () => {
@@ -430,40 +509,74 @@ export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
               </button>
             </div>
 
-            {/* Activity */}
-            <div
-              className={`${theme.cardBg} rounded-xl shadow-lg p-5 border ${theme.cardBorder} transition-all duration-300`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-lg font-semibold ${theme.textPrimary}`}>
-                  Activity
-                </h2>
-                <span className={`${theme.accentColor} font-medium`}>
-                  {data.activity.followers} followers
-                </span>
-              </div>
-
-              {data.activity.posts === 0 ? (
-                <div className={`${theme.textMuted} text-sm`}>
-                  <p>You haven't posted yet</p>
-                  <p className="mt-1">
-                    Posts you share will be displayed here.
-                  </p>
+            {/* Posts - Only for Trainer & Institute */}
+            {(isTrainer || isInstitute) && (
+              <div
+                className={`${theme.cardBg} rounded-xl shadow-lg p-5 border ${theme.cardBorder} transition-all duration-300`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className={`text-lg font-semibold ${theme.textPrimary}`}>
+                    Posts
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <span className={`${theme.accentColor} font-medium`}>
+                      {posts.length} posts
+                    </span>
+                    {!id && ( // Show Create Post button only on own profile
+                      <button
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent("openCreatePostModal"),
+                          )
+                        }
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                      >
+                        <Plus size={16} />
+                        Create Post
+                      </button>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className={`${theme.textSecondary}`}>
-                  <p>{data.activity.posts} posts shared</p>
-                </div>
-              )}
 
-              <div className="flex gap-3 mt-4">
-                <button
-                  className={`px-4 py-2 rounded-full border ${theme.cardBorder} ${theme.accentColor} font-medium hover:${theme.hoverBg} transition-all duration-300`}
-                >
-                  Create a post
-                </button>
+                {postsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin h-8 w-8 border-b-2 border-blue-500 rounded-full" />
+                  </div>
+                ) : posts.length === 0 ? (
+                  <div
+                    className={`${theme.textMuted} text-sm text-center py-8`}
+                  >
+                    <p>No posts yet</p>
+                    <p className="mt-1">Posts shared will be displayed here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {posts.map((post) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        user={{ id }} // Pass the trainer ID
+                        isLiked={false}
+                        isSaved={false}
+                        showComments={false}
+                        commentInput=""
+                        onLike={() => console.log("Like post:", post.id)}
+                        onSave={() => console.log("Save post:", post.id)}
+                        onShare={() => console.log("Share post:", post.id)}
+                        onComment={() =>
+                          console.log("Comment on post:", post.id)
+                        }
+                        onSubmitComment={() => console.log("Submit comment")}
+                        onToggleComments={() => console.log("Toggle comments")}
+                        onDelete={handleDeletePost}
+                        onEdit={handleEditPost}
+                        isOwnProfile={false} // Not own profile when viewing other trainer's profile
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+            )}
 
             {/* Experience - Only for Trainer & Institute */}
             {isTrainer && (

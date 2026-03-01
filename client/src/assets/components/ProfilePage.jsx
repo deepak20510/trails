@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ApiService from "../../services/api";
+import PostCard from "./PostCard";
 import {
   User,
   MapPin,
@@ -39,7 +40,10 @@ export default function ProfilePage() {
       // Mock profile data - replace with actual API call
       setProfile({
         ...user,
-        headline: user?.role === "TRAINER" ? "Professional Trainer & Coach" : "Educational Institution",
+        headline:
+          user?.role === "TRAINER"
+            ? "Professional Trainer & Coach"
+            : "Educational Institution",
         location: "San Francisco, CA",
         bio: "Passionate about education and helping others achieve their goals through quality training and mentorship.",
         experience: [
@@ -48,7 +52,8 @@ export default function ProfilePage() {
             title: "Senior Trainer",
             company: "Tech Academy",
             duration: "2020 - Present",
-            description: "Leading training programs for web development and data science",
+            description:
+              "Leading training programs for web development and data science",
           },
         ],
         education: [
@@ -59,9 +64,20 @@ export default function ProfilePage() {
             year: "2018",
           },
         ],
-        skills: ["JavaScript", "React", "Node.js", "Python", "Data Science", "Machine Learning"],
+        skills: [
+          "JavaScript",
+          "React",
+          "Node.js",
+          "Python",
+          "Data Science",
+          "Machine Learning",
+        ],
         languages: ["English", "Spanish"],
-        achievements: ["Best Trainer 2023", "1000+ Students Trained", "5 Star Rating"],
+        achievements: [
+          "Best Trainer 2023",
+          "1000+ Students Trained",
+          "5 Star Rating",
+        ],
         stats: {
           posts: 45,
           connections: 1234,
@@ -90,11 +106,13 @@ export default function ProfilePage() {
       <div className="bg-white rounded-lg shadow-sm border p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-4">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <div className="w-24 h-24 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
               <User className="w-12 h-12 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{profile?.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {profile?.name}
+              </h1>
               <p className="text-gray-600">{profile?.headline}</p>
               <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                 <span className="flex items-center">
@@ -121,19 +139,27 @@ export default function ProfilePage() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{profile?.stats.posts}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {profile?.stats.posts}
+            </div>
             <div className="text-sm text-gray-500">Posts</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{profile?.stats.connections}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {profile?.stats.connections}
+            </div>
             <div className="text-sm text-gray-500">Connections</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{profile?.stats.endorsements}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {profile?.stats.endorsements}
+            </div>
             <div className="text-sm text-gray-500">Endorsements</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{profile?.stats.views}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {profile?.stats.views}
+            </div>
             <div className="text-sm text-gray-500">Profile Views</div>
           </div>
         </div>
@@ -142,25 +168,31 @@ export default function ProfilePage() {
       {/* Navigation Tabs */}
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="flex border-b">
-          {["posts", "experience", "education", "skills", "portfolio"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 font-medium capitalize ${
-                activeTab === tab
-                  ? "border-b-2 border-blue-500 text-blue-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+          {["posts", "experience", "education", "skills", "portfolio"].map(
+            (tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-6 py-3 font-medium capitalize ${
+                  activeTab === tab
+                    ? "border-b-2 border-blue-500 text-blue-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab}
+              </button>
+            ),
+          )}
         </div>
 
         <div className="p-6">
           {activeTab === "posts" && <PostsTab />}
-          {activeTab === "experience" && <ExperienceTab experience={profile?.experience} />}
-          {activeTab === "education" && <EducationTab education={profile?.education} />}
+          {activeTab === "experience" && (
+            <ExperienceTab experience={profile?.experience} />
+          )}
+          {activeTab === "education" && (
+            <EducationTab education={profile?.education} />
+          )}
           {activeTab === "skills" && <SkillsTab skills={profile?.skills} />}
           {activeTab === "portfolio" && <PortfolioTab />}
         </div>
@@ -170,19 +202,113 @@ export default function ProfilePage() {
 }
 
 function PostsTab() {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user } = useAuth();
+
+  const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  useEffect(() => {
+    loadMyPosts();
+  }, []);
+
+  const loadMyPosts = async () => {
+    try {
+      setLoading(true);
+      const response = await ApiService.getMyPosts({ page: 1, limit: 10 });
+      if (response.success) {
+        // Normalize image URLs like FeedSection does
+        const normalizedPosts = (response.data || []).map((post) => ({
+          ...post,
+          imageUrl: post.imageUrl
+            ? post.imageUrl.startsWith("http")
+              ? post.imageUrl
+              : `${BACKEND_URL}${post.imageUrl}`
+            : null,
+        }));
+        setPosts(normalizedPosts);
+      } else {
+        setError("Failed to load posts");
+      }
+    } catch (err) {
+      console.error("Error loading posts:", err);
+      setError("Failed to load posts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePost = (postId) => {
+    setPosts(posts.filter((post) => post.id !== postId));
+  };
+
+  const handleEditPost = (post) => {
+    // TODO: Implement edit functionality
+    console.log("Edit post:", post);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin h-8 w-8 border-b-2 border-blue-500 rounded-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-red-500">
+        <p>{error}</p>
+        <button
+          onClick={loadMyPosts}
+          className="mt-2 text-blue-600 hover:text-blue-700 underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Recent Posts</h3>
+        <h3 className="text-lg font-semibold">My Posts</h3>
         <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
           <Plus className="w-4 h-4" />
           Create Post
         </button>
       </div>
-      <div className="text-center py-8 text-gray-500">
-        <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No posts yet. Create your first post to get started!</p>
-      </div>
+
+      {posts.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p>No posts yet. Create your first post to get started!</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              user={user}
+              isLiked={false}
+              isSaved={false}
+              showComments={false}
+              commentInput=""
+              onLike={() => console.log("Like post:", post.id)}
+              onSave={() => console.log("Save post:", post.id)}
+              onShare={() => console.log("Share post:", post.id)}
+              onComment={() => console.log("Comment on post:", post.id)}
+              onSubmitComment={() => console.log("Submit comment")}
+              onToggleComments={() => console.log("Toggle comments")}
+              onDelete={handleDeletePost}
+              onEdit={handleEditPost}
+              isOwnProfile={true}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -192,7 +318,9 @@ function ExperienceTab({ experience }) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Experience</h3>
-        <button className="text-blue-600 hover:text-blue-700">+ Add Experience</button>
+        <button className="text-blue-600 hover:text-blue-700">
+          + Add Experience
+        </button>
       </div>
       {experience?.map((exp) => (
         <div key={exp.id} className="border-l-2 border-blue-500 pl-4">
@@ -211,7 +339,9 @@ function EducationTab({ education }) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Education</h3>
-        <button className="text-blue-600 hover:text-blue-700">+ Add Education</button>
+        <button className="text-blue-600 hover:text-blue-700">
+          + Add Education
+        </button>
       </div>
       {education?.map((edu) => (
         <div key={edu.id} className="flex items-start space-x-3">
@@ -232,11 +362,16 @@ function SkillsTab({ skills }) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Skills & Endorsements</h3>
-        <button className="text-blue-600 hover:text-blue-700">+ Add Skill</button>
+        <button className="text-blue-600 hover:text-blue-700">
+          + Add Skill
+        </button>
       </div>
       <div className="flex flex-wrap gap-2">
         {skills?.map((skill) => (
-          <div key={skill} className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full">
+          <div
+            key={skill}
+            className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full"
+          >
             <span className="text-sm">{skill}</span>
             <Star className="w-3 h-3 text-yellow-500" />
           </div>
@@ -251,7 +386,9 @@ function PortfolioTab() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Portfolio</h3>
-        <button className="text-blue-600 hover:text-blue-700">+ Add Project</button>
+        <button className="text-blue-600 hover:text-blue-700">
+          + Add Project
+        </button>
       </div>
       <div className="text-center py-8 text-gray-500">
         <Award className="w-12 h-12 mx-auto mb-3 opacity-50" />

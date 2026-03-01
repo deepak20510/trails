@@ -7,8 +7,8 @@ const SALT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 10;
 
 const JWT_OPTIONS = {
   expiresIn: "15m", // short-lived access token
-  issuer: "trainer-platform",
-  audience: "trainer-users",
+  issuer: process.env.JWT_ISSUER || "trainer-platform",
+  audience: process.env.JWT_AUDIENCE || "trainer-users",
 };
 
 // ================= SIGNUP SERVICE =================
@@ -59,6 +59,17 @@ export const signupService = async ({ email, password, role }) => {
     JWT_OPTIONS,
   );
 
+  // Debug logging
+  console.log(
+    "Generated token for user:",
+    createdUser.email,
+    "Role:",
+    createdUser.role,
+  );
+  console.log("JWT_SECRET set:", process.env.JWT_SECRET ? "YES" : "NO");
+  console.log("JWT_ISSUER:", process.env.JWT_ISSUER);
+  console.log("JWT_AUDIENCE:", process.env.JWT_AUDIENCE);
+
   return {
     token,
     user: {
@@ -106,11 +117,21 @@ export const loginService = async ({ email, password }) => {
     {
       userId: user.id,
       role: user.role,
-      tokenVersion: user.tokenVersion,
     },
     process.env.JWT_SECRET,
     JWT_OPTIONS,
   );
+
+  // Debug logging
+  console.log(
+    "Generated login token for user:",
+    user.email,
+    "Role:",
+    user.role,
+  );
+  console.log("JWT_SECRET set:", process.env.JWT_SECRET ? "YES" : "NO");
+  console.log("JWT_ISSUER:", process.env.JWT_ISSUER);
+  console.log("JWT_AUDIENCE:", process.env.JWT_AUDIENCE);
 
   return {
     token,

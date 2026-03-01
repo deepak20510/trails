@@ -63,6 +63,14 @@ export default function AppRoutes() {
           }
         />
         <Route
+          path="/trainer/profile/:id"
+          element={
+            <ProtectedRoute requiredRole="TRAINER">
+              <ProfilePage userType={USER_TYPES.TRAINER} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/institute/profile"
           element={
             <ProtectedRoute requiredRole="INSTITUTION">

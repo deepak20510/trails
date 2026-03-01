@@ -1,6 +1,7 @@
 // Use proxy in dev (Vite proxies /api to backend), or explicit URL in production
 const API_BASE =
-  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "" : "http://localhost:5000") + "/api/v1";
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "" : "http://localhost:5000") + "/api/v1";
 
 class ApiService {
   /* ================= CORE REQUEST ================= */
@@ -28,7 +29,9 @@ class ApiService {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || `Error ${response.status}`);
+        throw new Error(
+          data.message || data.error || `Error ${response.status}`,
+        );
       }
 
       return data;
@@ -99,6 +102,11 @@ class ApiService {
     });
   }
 
+  static async getMyPosts(filters = {}) {
+    const params = new URLSearchParams(filters).toString();
+    return this.request(`/posts/my-posts${params ? `?${params}` : ""}`);
+  }
+
   /* ================= FILE UPLOAD ================= */
   // For post attachments, profile images, etc. Uses /upload/upload
 
@@ -145,7 +153,9 @@ class ApiService {
       sort: filters.sort ?? "newest",
     };
     const params = new URLSearchParams(
-      Object.fromEntries(Object.entries(query).filter(([, v]) => v != null && v !== ""))
+      Object.fromEntries(
+        Object.entries(query).filter(([, v]) => v != null && v !== ""),
+      ),
     ).toString();
     return this.request(`/trainer/search${params ? `?${params}` : ""}`);
   }
@@ -252,7 +262,9 @@ class ApiService {
 
   static async getMaterialRatings(materialId, query = {}) {
     const params = new URLSearchParams(query).toString();
-    return this.request(`/material-rating/material/${materialId}${params ? `?${params}` : ""}`);
+    return this.request(
+      `/material-rating/material/${materialId}${params ? `?${params}` : ""}`,
+    );
   }
 
   /* ================= REPORTS (Admin) ================= */
@@ -288,7 +300,9 @@ class ApiService {
     try {
       const trainers = await this.searchTrainers({ limit: 50 });
       const skills = new Set();
-      (trainers.data || []).forEach((t) => (t.skills || []).forEach((s) => skills.add(s)));
+      (trainers.data || []).forEach((t) =>
+        (t.skills || []).forEach((s) => skills.add(s)),
+      );
       return { success: true, data: [...skills].slice(0, limit) };
     } catch {
       return { success: true, data: [] };
@@ -298,7 +312,11 @@ class ApiService {
   static async getPopularLocations(limit = 10) {
     try {
       const trainers = await this.searchTrainers({ limit: 50 });
-      const locations = [...new Set((trainers.data || []).map((t) => t.location).filter(Boolean))];
+      const locations = [
+        ...new Set(
+          (trainers.data || []).map((t) => t.location).filter(Boolean),
+        ),
+      ];
       return { success: true, data: locations.slice(0, limit) };
     } catch {
       return { success: true, data: [] };

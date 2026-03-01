@@ -7,6 +7,7 @@ import {
   deletePost,
   likePost,
   unlikePost,
+  getMyPosts,
 } from "./posts.controller.js";
 
 import { validate } from "../../middleware/validate.middleware.js";
@@ -22,6 +23,14 @@ const router = express.Router();
 // Public routes
 router.get("/", validate(getPostsSchema, "query"), getPosts);
 router.get("/:postId", getPostById);
+
+// Protected routes
+router.get(
+  "/my-posts",
+  authMiddleware,
+  validate(getPostsSchema, "query"),
+  getMyPosts,
+);
 
 // Protected routes - trainers and institutions only
 router.post(

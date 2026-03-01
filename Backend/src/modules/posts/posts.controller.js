@@ -6,6 +6,7 @@ import {
   deletePostService,
   likePostService,
   unlikePostService,
+  getMyPostsService,
 } from "./posts.service.js";
 
 // Create Post
@@ -70,6 +71,36 @@ export const getPosts = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Failed to retrieve posts",
+    });
+  }
+};
+
+// Get My Posts
+export const getMyPosts = async (req, res) => {
+  try {
+    const filters = { ...req.query };
+    const result = await getMyPostsService(req.user.userId, filters);
+
+    res.status(200).json({
+      success: true,
+      message: "My posts retrieved successfully",
+      data: result.posts,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    console.error("Get my posts error:", error);
+
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to retrieve my posts",
     });
   }
 };

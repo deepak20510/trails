@@ -1,18 +1,20 @@
 import { useState } from "react";
-import { 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  Bookmark, 
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
   MoreHorizontal,
   ThumbsUp,
   User,
   Send,
   FileText,
+  Edit,
+  Trash2,
 } from "lucide-react";
 
-export default function PostCard({ 
-  post, 
+export default function PostCard({
+  post,
   user,
   isLiked,
   isSaved,
@@ -23,10 +25,14 @@ export default function PostCard({
   onShare,
   onComment,
   onSubmitComment,
-  onToggleComments
+  onToggleComments,
+  onDelete,
+  onEdit,
+  isOwnProfile = false,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+  const [showDropdown, setShowDropdown] = useState(false);
+
   const formatTimeAgo = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -52,10 +58,10 @@ export default function PostCard({
       <div className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
               {post.author?.profilePicture ? (
-                <img 
-                  src={post.author.profilePicture} 
+                <img
+                  src={post.author.profilePicture}
                   alt={post.author.name}
                   className="w-full h-full rounded-full object-cover"
                 />
@@ -63,11 +69,14 @@ export default function PostCard({
                 <User className="w-6 h-6 text-white" />
               )}
             </div>
-            
+
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors">
-                  {post.author?.firstName || post.author?.institutionProfile?.name || post.author?.email?.split('@')[0] || "Anonymous User"}
+                  {post.author?.firstName ||
+                    post.author?.institutionProfile?.name ||
+                    post.author?.email?.split("@")[0] ||
+                    "Anonymous User"}
                 </h3>
                 {post.author?.headline && (
                   <span className="text-gray-500 text-sm">•</span>
@@ -78,7 +87,7 @@ export default function PostCard({
                   </span>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <span>{post.author?.title || "Member"}</span>
                 <span>•</span>
@@ -87,9 +96,51 @@ export default function PostCard({
             </div>
           </div>
 
-          <button className="text-gray-400 hover:text-gray-600 transition-colors">
-            <MoreHorizontal size={20} />
-          </button>
+          {isOwnProfile ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <MoreHorizontal size={20} />
+              </button>
+
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <button
+                    onClick={() => {
+                      onEdit(post);
+                      setShowDropdown(false);
+                    }}
+                    className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-100 text-gray-700 transition-colors"
+                  >
+                    <Edit size={16} />
+                    Edit Post
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          "Are you sure you want to delete this post?",
+                        )
+                      ) {
+                        onDelete(post.id);
+                      }
+                      setShowDropdown(false);
+                    }}
+                    className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-gray-100 text-red-600 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    Delete Post
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button className="text-gray-400 hover:text-gray-600 transition-colors">
+              <MoreHorizontal size={20} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -100,8 +151,10 @@ export default function PostCard({
             <div className="whitespace-pre-wrap">{post.content}</div>
           ) : (
             <div>
-              <div className="whitespace-pre-wrap">{truncateContent(post.content)}</div>
-              <button 
+              <div className="whitespace-pre-wrap">
+                {truncateContent(post.content)}
+              </div>
+              <button
                 onClick={() => setIsExpanded(true)}
                 className="text-gray-500 hover:text-gray-700 text-sm font-medium mt-2"
               >
@@ -173,8 +226,8 @@ export default function PostCard({
           <button
             onClick={onLike}
             className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${
-              isLiked 
-                ? "text-blue-600 bg-blue-50 hover:bg-blue-100" 
+              isLiked
+                ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
                 : "text-gray-600 hover:bg-gray-100"
             }`}
           >
@@ -201,8 +254,8 @@ export default function PostCard({
           <button
             onClick={onSave}
             className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${
-              isSaved 
-                ? "text-yellow-600 bg-yellow-50 hover:bg-yellow-100" 
+              isSaved
+                ? "text-yellow-600 bg-yellow-50 hover:bg-yellow-100"
                 : "text-gray-600 hover:bg-gray-100"
             }`}
           >
@@ -220,8 +273,8 @@ export default function PostCard({
             <div className="flex gap-3">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                 {user?.profilePicture ? (
-                  <img 
-                    src={user.profilePicture} 
+                  <img
+                    src={user.profilePicture}
                     alt={user.name}
                     className="w-full h-full rounded-full object-cover"
                   />
@@ -229,7 +282,7 @@ export default function PostCard({
                   <User className="w-4 h-4 text-white" />
                 )}
               </div>
-              
+
               <div className="flex-1 flex gap-2">
                 <input
                   type="text"
@@ -237,7 +290,7 @@ export default function PostCard({
                   onChange={(e) => onComment(e.target.value)}
                   placeholder="Add a comment..."
                   className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  onKeyPress={(e) => e.key === 'Enter' && onSubmitComment()}
+                  onKeyPress={(e) => e.key === "Enter" && onSubmitComment()}
                 />
                 <button
                   onClick={onSubmitComment}
@@ -257,8 +310,8 @@ export default function PostCard({
                 <div key={comment.id} className="flex gap-3">
                   <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                     {comment.author?.profilePicture ? (
-                      <img 
-                        src={comment.author.profilePicture} 
+                      <img
+                        src={comment.author.profilePicture}
                         alt={comment.author.name}
                         className="w-full h-full rounded-full object-cover"
                       />
@@ -266,7 +319,7 @@ export default function PostCard({
                       <User className="w-4 h-4 text-white" />
                     )}
                   </div>
-                  
+
                   <div className="flex-1">
                     <div className="bg-gray-50 rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-1">
@@ -279,7 +332,7 @@ export default function PostCard({
                       </div>
                       <p className="text-sm text-gray-800">{comment.content}</p>
                     </div>
-                    
+
                     <div className="flex items-center gap-4 mt-1 ml-3">
                       <button className="text-xs text-gray-500 hover:text-blue-600 transition-colors">
                         Like
@@ -291,7 +344,7 @@ export default function PostCard({
                   </div>
                 </div>
               ))}
-              
+
               {post.comments.length > 3 && (
                 <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                   View all {post.comments.length} comments
