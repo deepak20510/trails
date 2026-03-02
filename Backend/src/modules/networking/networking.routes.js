@@ -1,0 +1,16 @@
+import express from "express";
+import * as networkingController from "./networking.controller.js";
+import { authenticate } from "../../middleware/auth.middleware.js";
+
+const router = express.Router();
+
+router.use(authenticate);
+
+router.post("/connect/:userId", networkingController.sendRequest);
+router.post("/respond/:requestId", networkingController.respondToRequest);
+router.get("/my-network", networkingController.getNetwork);
+router.get("/pending", networkingController.getPendingRequests);
+router.get("/suggestions", networkingController.getSuggestions);
+router.delete("/remove/:userId", networkingController.removeConnection);
+
+export default router;

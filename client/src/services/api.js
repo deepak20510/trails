@@ -151,6 +151,23 @@ class ApiService {
     return this.request("/trainer/profile");
   }
 
+  static async getUserProfile(id) {
+    const url = id ? `/users/profile/${id}` : "/users/profile";
+    return this.request(url);
+  }
+
+  static async updateGeneralProfile(data) {
+    return this.request("/users/profile", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  static async searchPeople(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/users/search${query ? `?${query}` : ""}`);
+  }
+
   static async updateTrainerProfile(data) {
     return this.request("/trainer/profile", {
       method: "PUT",
@@ -311,7 +328,65 @@ class ApiService {
     });
   }
 
+  /* ================= NETWORKING ================= */
+
+  static async connectUser(userId) {
+    return this.request(`/networking/connect/${userId}`, { method: "POST" });
+  }
+
+  static async respondToConnection(requestId, status) {
+    return this.request(`/networking/respond/${requestId}`, {
+      method: "POST",
+      body: JSON.stringify({ status })
+    });
+  }
+
+  static async getMyNetwork() {
+    return this.request("/networking/my-network");
+  }
+
+  static async getPendingConnections() {
+    return this.request("/networking/pending");
+  }
+
+  static async getNetworkingSuggestions() {
+    return this.request("/networking/suggestions");
+  }
+
+  static async removeConnection(userId) {
+    return this.request(`/networking/remove/${userId}`, { method: "DELETE" });
+  }
+
+  /* ================= MESSAGING ================= */
+
+  static async getOrCreateConversation(participantId) {
+    return this.request("/messaging/conversation", {
+      method: "POST",
+      body: JSON.stringify({ participantId })
+    });
+  }
+
+  static async getConversations() {
+    return this.request("/messaging/conversations");
+  }
+
+  static async sendMessage(conversationId, content) {
+    return this.request("/messaging/send", {
+      method: "POST",
+      body: JSON.stringify({ conversationId, content })
+    });
+  }
+
+  static async getMessages(conversationId) {
+    return this.request(`/messaging/${conversationId}/messages`);
+  }
+
+  static async markAsRead(conversationId) {
+    return this.request(`/messaging/read/${conversationId}`, { method: "PATCH" });
+  }
+
   /* ================= OPTIONAL (not in backend - return empty to avoid errors) ================= */
+
 
   static async getPopularSkills(limit = 10) {
     try {

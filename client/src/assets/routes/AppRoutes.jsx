@@ -49,7 +49,15 @@ export default function AppRoutes() {
         <Route
           path="/student/profile"
           element={
-            <ProtectedRoute requiredRole="STUDENT">
+            <ProtectedRoute>
+              <ProfilePage userType={USER_TYPES.STUDENT} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/profile/:id"
+          element={
+            <ProtectedRoute>
               <ProfilePage userType={USER_TYPES.STUDENT} />
             </ProtectedRoute>
           }
@@ -57,7 +65,7 @@ export default function AppRoutes() {
         <Route
           path="/trainer/profile"
           element={
-            <ProtectedRoute requiredRole="TRAINER">
+            <ProtectedRoute>
               <ProfilePage userType={USER_TYPES.TRAINER} />
             </ProtectedRoute>
           }
@@ -65,7 +73,7 @@ export default function AppRoutes() {
         <Route
           path="/trainer/profile/:id"
           element={
-            <ProtectedRoute requiredRole="TRAINER">
+            <ProtectedRoute>
               <ProfilePage userType={USER_TYPES.TRAINER} />
             </ProtectedRoute>
           }
@@ -73,11 +81,20 @@ export default function AppRoutes() {
         <Route
           path="/institute/profile"
           element={
-            <ProtectedRoute requiredRole="INSTITUTION">
+            <ProtectedRoute>
               <ProfilePage userType={USER_TYPES.INSTITUTE} />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/institute/profile/:id"
+          element={
+            <ProtectedRoute>
+              <ProfilePage userType={USER_TYPES.INSTITUTE} />
+            </ProtectedRoute>
+          }
+        />
+
 
         {/* Admin Route */}
         <Route

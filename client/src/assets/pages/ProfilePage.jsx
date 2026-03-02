@@ -35,10 +35,11 @@ export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
   const config = DASHBOARD_CONFIG[userType];
   const profile = config.leftSidebar.profile;
 
-  // State for edit modal and posts
+  // State for edit modal, profiles and posts
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editableData, setEditableData] = useState(null);
+  const [profileData, setProfileData] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -46,6 +47,24 @@ export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
 
   // Determine if viewing own profile
   const isOwnProfile = !id;
+
+  const loadProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await ApiService.getUserProfile(id);
+      if (response.success) {
+        setProfileData(response.data);
+      }
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const loadPosts = useCallback(async () => {
     try {
@@ -123,207 +142,129 @@ export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
     console.log("Edit post:", post);
   };
 
-  // Profile data based on user type
-  const getProfileData = () => {
-    if (userType === USER_TYPES.STUDENT) {
+  // Profile data mapped from backend fields
+  const getMappedData = () => {
+    if (!profileData) {
+      // Return empty structure while loading
       return {
-        name: editableData?.name || authUser?.name || profile.name,
-        headline:
-          editableData?.headline || "Computer Science Student | Aspiring Software Developer | AI & ML Enthusiast",
-        location: editableData?.location || "Odisha, India",
-        education: [
-          {
-            school: "NIST University",
-            degree: "Bachelor of Technology - BTech, Computer Science",
-            years: "2023 - 2027",
-            logo: "https://via.placeholder.com/50",
-          },
-          {
-            school: "Xavier School",
-            degree: "Higher Secondary Education",
-            years: "2021 - 2023",
-            logo: "https://via.placeholder.com/50",
-          },
-        ],
-        experience: [],
-        skills: editableData?.skills || [
-          "React",
-          "JavaScript",
-          "Python",
-          "Machine Learning",
-          "Node.js",
-          "Git",
-          "Tailwind CSS",
-        ],
-        connections: 64,
-        profileViews: 30,
-        analytics: {
-          views: 31,
-          impressions: 0,
-          appearances: 4,
-        },
-        activity: {
-          followers: 12,
-          posts: 0,
-        },
+        name: "", headline: "", location: "",
+        experience: [], education: [], skills: [],
+        analytics: { views: 0, impressions: 0, appearances: 0 },
+        activity: { followers: 0, posts: 0 }
       };
     }
+
+    const name = profileData.firstName
+      ? `${profileData.firstName} ${profileData.lastName || ""}`.trim()
+      : profileData.name || "User";
+
+    const formatDateRange = (start, end, isCurrent) => {
+      const startYear = start ? new Date(start).getFullYear() : "N/A";
+      const endYear = isCurrent ? "Present" : end ? new Date(end).getFullYear() : "N/A";
+      return `${startYear} - ${endYear}`;
+    };
+
+    const commonData = {
+      name,
+      headline: profileData.headline || "Member at Tutroid",
+      location: profileData.location || "Location not set",
+      avatar: profileData.profilePicture || profileData.avatar || profile.avatar,
+      coverImage: profileData.coverImage || null,
+      skills: profileData.trainerProfile?.skills || profileData.skills || [],
+      analytics: {
+        views: profileData.profileViews || 0,
+        impressions: profileData.postImpressions || 0,
+        appearances: profileData.searchAppearances || 0,
+      },
+      activity: {
+        followers: profileData.followersCount || 0,
+        posts: posts.length,
+      },
+      education: (profileData.education || []).map(edu => ({
+        school: edu.school,
+        degree: edu.degree,
+        field: edu.fieldOfStudy,
+        years: formatDateRange(edu.startDate, edu.endDate, false),
+        logo: `https://ui-avatars.com/api/?name=${encodeURIComponent(edu.school)}&background=random`,
+      })),
+      experience: (profileData.experience || []).map(exp => ({
+        title: exp.title,
+        company: exp.company,
+        location: exp.location,
+        years: formatDateRange(exp.startDate, exp.endDate, exp.isCurrent),
+        type: "Full-time", // Mock for now
+        duration: "Variable",
+        logo: `https://ui-avatars.com/api/?name=${encodeURIComponent(exp.company)}&background=random`,
+      })),
+      programs: [], // Placeholder for institute programs
+    };
 
     if (userType === USER_TYPES.TRAINER) {
       return {
-        name: editableData?.name || authUser?.name || profile.name,
-        headline:
-          editableData?.headline || "JavaScript Expert | Full Stack Developer | Technical Instructor | 5+ Years Experience",
-        location: editableData?.location || "Bangalore, India",
-        avatar: editableData?.avatar || authUser?.avatar || profile.avatar,
-        education: [
-          {
-            school: "IIT Delhi",
-            degree: "Master of Technology - MTech, Computer Science",
-            years: "2018 - 2020",
-            logo: "https://via.placeholder.com/50",
-          },
-        ],
-        experience: editableData?.experience || [
-          {
-            title: "Senior Technical Trainer",
-            company: "Tech Academy",
-            type: "Full-time",
-            years: "2022 - Present",
-            duration: "3 yrs",
-            logo: "https://via.placeholder.com/50",
-          },
-          {
-            title: "Software Developer",
-            company: "Infosys",
-            type: "Full-time",
-            years: "2020 - 2022",
-            duration: "2 yrs",
-            logo: "https://via.placeholder.com/50",
-          },
-        ],
-        skills: editableData?.skills || [
-          "JavaScript",
-          "React",
-          "Node.js",
-          "MongoDB",
-          "AWS",
-          "Docker",
-          "System Design",
-          "Mentoring",
-        ],
-        students: 250,
-        courses: 12,
-        rating: 4.8,
-        analytics: {
-          views: 156,
-          impressions: 1240,
-          appearances: 45,
-        },
-        activity: {
-          followers: 892,
-          posts: 24,
-        },
+        ...commonData,
+        headline: profileData.trainerProfile?.bio || profileData.headline || "Expert Trainer",
+        students: profileData.trainerProfile?.completedRequests || 0,
+        courses: 0, // Mock for now
+        rating: profileData.trainerProfile?.rating || 0,
       };
     }
 
-    // Institute
-    return {
-      name: editableData?.name || authUser?.name || profile.name,
-      headline:
-        editableData?.headline || "Leading Educational Institution | Technology Training & Certification | 5000+ Students Trained",
-      location: editableData?.location || "Hyderabad, India",
-      founded: editableData?.founded || "2015",
-      employees: "200-500",
-      website: editableData?.website || "www.techacademy.edu",
-      education: [],
-      programs: [
-        {
-          name: "Full Stack Web Development",
-          students: 1200,
-          duration: "6 months",
-        },
-        {
-          name: "Data Science & AI",
-          students: 800,
-          duration: "8 months",
-        },
-        {
-          name: "Cloud Computing",
-          students: 650,
-          duration: "4 months",
-        },
-      ],
-      skills: editableData?.skills || [
-        "Software Development",
-        "Data Science",
-        "Cloud Computing",
-        "DevOps",
-        "Cybersecurity",
-        "AI/ML",
-      ],
-      trainers: 45,
-      students: 1200,
-      rating: 4.6,
-      analytics: {
-        views: 523,
-        impressions: 4560,
-        appearances: 127,
-      },
-      activity: {
-        followers: 5600,
-        posts: 89,
-      },
-    };
+    if (userType === USER_TYPES.INSTITUTE) {
+      return {
+        ...commonData,
+        headline: profileData.institutionProfile?.name || profileData.headline || "Institution",
+        founded: "2020", // Mock
+        employees: "10-50", // Mock
+        trainers: 0,
+        students: 0,
+        rating: profileData.institutionProfile?.rating || 0,
+        programs: [
+          { name: "Full Stack Development", students: 120, duration: "6 months" },
+          { name: "Digital Marketing", students: 85, duration: "3 months" }
+        ]
+      };
+    }
+
+    return commonData;
   };
 
-  const data = getProfileData();
+  const data = getMappedData();
+
+  if (loading) {
+    return (
+      <div className={`${theme.bg} min-h-screen flex items-center justify-center`}>
+        <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   const isStudent = userType === USER_TYPES.STUDENT;
   const isTrainer = userType === USER_TYPES.TRAINER;
   const isInstitute = userType === USER_TYPES.INSTITUTE;
 
-  // Handler to save edited profile
-  const handleSaveProfile = async (updatedData) => {
-    try {
-      // Update local state
-      setEditableData(updatedData);
-      
-      // Dispatch event to notify other components (like dashboard) of profile changes
-      // Include all profile data for sidebar sync
-      const broadcastData = {
-        name: updatedData.name,
-        headline: updatedData.headline,
-        location: updatedData.location,
-        avatar: updatedData.avatar,
-        skills: updatedData.skills,
-      };
+  // Handler to receive updated profile data from modal
+  const handleSaveProfile = (updatedUser) => {
+    setProfileData(prev => ({ ...prev, ...updatedUser }));
 
-      window.dispatchEvent(
-        new CustomEvent("profileUpdated", {
-          detail: broadcastData,
-        })
-      );
+    // Dispatch event for sidebar sync
+    window.dispatchEvent(
+      new CustomEvent("profileUpdated", {
+        detail: {
+          name: `${updatedUser.firstName} ${updatedUser.lastName || ""}`.trim(),
+          headline: updatedUser.headline,
+          location: updatedUser.location,
+          avatar: updatedUser.profilePicture,
+        },
+      })
+    );
 
-      // Dispatch global update if it's own profile
-      if (isOwnProfile && updateProfile) {
-        try {
-          await updateProfile({
-            name: updatedData.name,
-            headline: updatedData.headline,
-            location: updatedData.location,
-            avatar: updatedData.avatar,
-          });
-        } catch (error) {
-          console.error("Failed to update auth context:", error);
-        }
-      }
-
-      setSaveSuccess(true);
-    } catch (error) {
-      console.error("Error saving profile:", error);
+    if (isOwnProfile && updateProfile) {
+      updateProfile(updatedUser);
     }
+
+    setSaveSuccess(true);
   };
+
 
   return (
     <div
@@ -810,10 +751,10 @@ export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
                   <span
                     key={index}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium ${isStudent
-                        ? "bg-blue-500/10 text-blue-500"
-                        : isTrainer
-                          ? "bg-emerald-500/10 text-emerald-500"
-                          : "bg-purple-500/10 text-purple-500"
+                      ? "bg-blue-500/10 text-blue-500"
+                      : isTrainer
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : "bg-purple-500/10 text-purple-500"
                       }`}
                   >
                     {skill}

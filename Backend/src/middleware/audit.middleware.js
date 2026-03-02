@@ -1,11 +1,9 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from "../db.js";
 
 export const auditMiddleware = (req, res, next) => {
   const originalSend = res.send;
-  
-  res.send = function(data) {
+
+  res.send = function (data) {
     // Log successful operations (status codes < 400)
     if (res.statusCode < 400 && req.user) {
       prisma.auditLog.create({
@@ -26,10 +24,10 @@ export const auditMiddleware = (req, res, next) => {
         console.error('Failed to create audit log:', error);
       });
     }
-    
+
     originalSend.call(this, data);
   };
-  
+
   next();
 };
 
@@ -53,15 +51,15 @@ export const logAction = async (userId, action, resource, details = {}) => {
 export const softDeleteMiddleware = (model) => {
   return async (req, res, next) => {
     const originalDelete = req.prisma[model].delete;
-    
-    req.prisma[model].delete = async function(args) {
+
+    req.prisma[model].delete = async function (args) {
       // Convert delete to soft delete by updating deletedAt
       return req.prisma[model].update({
         where: args.where,
         data: { deletedAt: new Date() }
       });
     };
-    
+
     next();
   };
 };
@@ -72,25 +70,25 @@ export const excludeDeletedMiddleware = (model) => {
     const originalFindMany = req.prisma[model].findMany;
     const originalFindUnique = req.prisma[model].findUnique;
     const originalFindFirst = req.prisma[model].findFirst;
-    
+
     const addDeletedFilter = (args) => {
       if (!args.where) args.where = {};
       args.where.deletedAt = null;
       return args;
     };
-    
-    req.prisma[model].findMany = function(args) {
+
+    req.prisma[model].findMany = function (args) {
       return originalFindMany.call(this, addDeletedFilter(args || {}));
     };
-    
-    req.prisma[model].findUnique = function(args) {
+
+    req.prisma[model].findUnique = function (args) {
       return originalFindUnique.call(this, addDeletedFilter(args || {}));
     };
-    
-    req.prisma[model].findFirst = function(args) {
+
+    req.prisma[model].findFirst = function (args) {
       return originalFindFirst.call(this, addDeletedFilter(args || {}));
     };
-    
+
     next();
   };
 };

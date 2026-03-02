@@ -7,240 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                 String              @id @default(uuid())
-  email              String              @unique
-  password           String
-  role               Role
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  deletedAt          DateTime?
-  isActive           Boolean             @default(true)
-  firstName          String?
-  lastName           String?
-  auditLogs          AuditLog[]
-  institutionProfile InstitutionProfile?
-  posts              Post[]
-  postLikes          PostLike[]
-  reports            Report[]
-  reviews            Review[]
-  trainerProfile     TrainerProfile?
-}
-
-model TrainerProfile {
-  id                String           @id @default(uuid())
-  userId            String           @unique
-  bio               String?
-  experience        Int
-  rating            Float            @default(0)
-  verified          Boolean          @default(false)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  skills            String[]
-  isActive          Boolean          @default(true)
-  location          String?
-  completedRequests Int              @default(0)
-  completionRate    Float            @default(0.0)
-  deletedAt         DateTime?
-  reputationScore   Float            @default(0.0)
-  responseTime      Int              @default(0)
-  badges            Badge[]
-  materials         Material[]
-  materialRatings   MaterialRating[]
-  reports           Report[]
-  requests          Request[]
-  reviews           Review[]
-  user              User             @relation(fields: [userId], references: [id])
-
-  @@index([location])
-  @@index([experience])
-  @@index([rating])
-  @@index([reputationScore])
-  @@index([completedRequests])
-}
-
-model InstitutionProfile {
-  id        String    @id @default(uuid())
-  userId    String    @unique
-  name      String
-  location  String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isActive  Boolean   @default(true)
-  rating    Float     @default(0)
-  user      User      @relation(fields: [userId], references: [id])
-  reports   Report[]
-  requests  Request[]
-  reviews   Review[]
-
-  @@index([location])
-  @@index([rating])
-}
-
-model Material {
-  id              String           @id @default(uuid())
-  title           String
-  fileUrl         String
-  trainerId       String
-  createdAt       DateTime         @default(now())
-  deletedAt       DateTime?
-  isActive        Boolean          @default(true)
-  updatedAt       DateTime         @default(now()) @updatedAt
-  trainer         TrainerProfile   @relation(fields: [trainerId], references: [id])
-  materialRatings MaterialRating[]
-  reports         Report[]
-
-  @@index([trainerId])
-  @@index([isActive])
-}
-
-model Request {
-  id                        String             @id @default(uuid())
-  trainerId                 String
-  institutionId             String
-  status                    RequestStatus      @default(PENDING)
-  createdAt                 DateTime           @default(now())
-  updatedAt                 DateTime           @updatedAt
-  initiatedBy               RequestInitiator
-  institutionMarkedComplete Boolean            @default(false)
-  trainerMarkedComplete     Boolean            @default(false)
-  institution               InstitutionProfile @relation(fields: [institutionId], references: [id])
-  trainer                   TrainerProfile     @relation(fields: [trainerId], references: [id])
-  reviews                   Review[]
-
-  @@unique([trainerId, institutionId])
-  @@index([trainerId])
-  @@index([institutionId])
-  @@index([status])
-}
-
-model Review {
-  id                   String              @id @default(uuid())
-  rating               Int
-  comment              String?
-  createdAt            DateTime            @default(now())
-  requestId            String
-  reviewerId           String
-  trainerProfileId     String?
-  institutionProfileId String?
-  institutionProfile   InstitutionProfile? @relation(fields: [institutionProfileId], references: [id])
-  request              Request             @relation(fields: [requestId], references: [id])
-  reviewer             User                @relation(fields: [reviewerId], references: [id])
-  trainerProfile       TrainerProfile?     @relation(fields: [trainerProfileId], references: [id])
-
-  @@unique([requestId, reviewerId])
-  @@index([trainerProfileId])
-  @@index([institutionProfileId])
-}
-
-model Badge {
-  id        String         @id @default(uuid())
-  name      String
-  icon      String
-  criteria  String
-  trainerId String
-  createdAt DateTime       @default(now())
-  trainer   TrainerProfile @relation(fields: [trainerId], references: [id])
-
-  @@unique([trainerId, name])
-}
-
-model MaterialRating {
-  id               String          @id @default(uuid())
-  materialId       String
-  studentId        String
-  rating           Int
-  comment          String?
-  createdAt        DateTime        @default(now())
-  trainerProfileId String?
-  material         Material        @relation(fields: [materialId], references: [id])
-  trainerProfile   TrainerProfile? @relation(fields: [trainerProfileId], references: [id])
-
-  @@unique([materialId, studentId])
-  @@index([materialId])
-  @@index([studentId])
-}
-
-model Report {
-  id                   String              @id @default(uuid())
-  reporterId           String
-  targetId             String
-  targetType           ReportTargetType
-  reason               String
-  status               ReportStatus        @default(PENDING)
-  details              String?
-  createdAt            DateTime            @default(now())
-  resolvedAt           DateTime?
-  resolvedBy           String?
-  trainerProfileId     String?
-  institutionProfileId String?
-  materialId           String?
-  institutionProfile   InstitutionProfile? @relation(fields: [institutionProfileId], references: [id])
-  material             Material?           @relation(fields: [materialId], references: [id])
-  reporter             User                @relation(fields: [reporterId], references: [id])
-  trainerProfile       TrainerProfile?     @relation(fields: [trainerProfileId], references: [id])
-
-  @@index([reporterId])
-  @@index([targetId])
-  @@index([targetType])
-  @@index([status])
-}
-
-model Post {
-  id        String     @id @default(uuid())
-  content   String
-  type      String     @default("text")
-  imageUrl  String?
-  videoUrl  String?
-  tags      String[]
-  likes     Int        @default(0)
-  comments  Int        @default(0)
-  shares    Int        @default(0)
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  deletedAt DateTime?
-  authorId  String
-  author    User       @relation(fields: [authorId], references: [id])
-  postLikes PostLike[]
-
-  @@index([authorId])
-  @@index([isActive])
-  @@index([createdAt])
-  @@index([type])
-}
-
-model PostLike {
-  id        String   @id @default(uuid())
-  postId    String
-  userId    String
-  createdAt DateTime @default(now())
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([postId, userId])
-  @@index([postId])
-  @@index([userId])
-}
-
-model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  action    String
-  resource  String
-  details   Json?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([action])
-  @@index([resource])
-  @@index([createdAt])
-}
-
 enum Role {
   TRAINER
   INSTITUTION
@@ -276,33 +42,40 @@ enum ReportTargetType {
   MATERIAL
   REVIEW
 }
-<<<<<<< HEAD
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  firstName String?
-  lastName  String?
-  role      Role
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  isActive  Boolean   @default(true)
-  deletedAt DateTime?
+  id             String    @id @default(uuid())
+  email          String    @unique
+  password       String
+  firstName      String?
+  lastName       String?
+  profilePicture String?
+  bio            String?
+  headline       String?
+  location       String?
+  role           Role
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  isActive       Boolean   @default(true)
+  deletedAt      DateTime?
 
   trainerProfile     TrainerProfile?
   institutionProfile InstitutionProfile?
+  studentProfile     StudentProfile?
   reviews            Review[]
   reports            Report[]
   auditLogs          AuditLog[]
   posts              Post[]
   postLikes          PostLike[]
+  education          Education[]
+  experience         Experience[]
 
   sentConnections     Connection[]   @relation("SentConnections")
   receivedConnections Connection[]   @relation("ReceivedConnections")
   conversations       Conversation[] @relation("UserConversations")
   messages            Message[]
 }
+
 
 model TrainerProfile {
   id                String    @id @default(uuid())
@@ -356,6 +129,53 @@ model InstitutionProfile {
   @@index([location])
   @@index([rating])
 }
+
+model StudentProfile {
+  id        String    @id @default(uuid())
+  userId    String    @unique
+  bio       String?
+  location  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Education {
+  id           String    @id @default(uuid())
+  userId       String
+  school       String
+  degree       String?
+  fieldOfStudy String?
+  startDate    DateTime?
+  endDate      DateTime?
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Experience {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String
+  company     String
+  location    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  description String?
+  isCurrent   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
 
 model Material {
   id        String    @id @default(uuid())
@@ -576,6 +396,3 @@ model AuditLog {
   @@index([resource])
   @@index([createdAt])
 }
-
-=======
->>>>>>> fdba3b0b73b96fa86b6f5a0f8959a031d97f9b93

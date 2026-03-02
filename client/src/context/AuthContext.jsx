@@ -183,11 +183,12 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.UPDATE_PROFILE_START });
 
     try {
-      const response = await ApiService.updateTrainerProfile(profileData);
+      // Use the generic user profile update endpoint
+      const response = await ApiService.updateGeneralProfile(profileData);
 
       const updatedUser = {
         ...state.user,
-        ...profileData,
+        ...response.data, // use data from backend
       };
 
       dispatch({
@@ -204,6 +205,7 @@ export const AuthProvider = ({ children }) => {
       throw error;
     }
   };
+
 
   return (
     <AuthContext.Provider

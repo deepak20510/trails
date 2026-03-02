@@ -46,3 +46,6 @@ export const authMiddleware = (allowedRoles = []) => {
     }
   };
 };
+
+// Shorthand for general authentication without role checking
+export const authenticate = authMiddleware();

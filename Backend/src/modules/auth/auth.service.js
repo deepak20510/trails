@@ -6,13 +6,14 @@ import { AppError } from "../../utils/AppError.js";
 const SALT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 10;
 
 const JWT_OPTIONS = {
-  expiresIn: "15m", // short-lived access token
+  expiresIn: "1d", // longer life for demo
   issuer: process.env.JWT_ISSUER || "trainer-platform",
   audience: process.env.JWT_AUDIENCE || "trainer-users",
 };
 
 // ================= SIGNUP SERVICE =================
-export const signupService = async ({ email, password, role }) => {
+export const signupService = async ({ email, password, role, phone, organization }) => {
+  console.log("SignupService CALLED with:", { email, role, phone, organization });
   if (!email || !password || !role) {
     throw new AppError("Missing required fields", 400);
   }
@@ -41,14 +42,48 @@ export const signupService = async ({ email, password, role }) => {
       email: normalizedEmail,
       password: hashedPassword,
       role,
+      // Use organization as a headline or name base
+      headline: role === "TRAINER" ? (organization || "Expert Trainer") : (role === "INSTITUTION" ? (organization || "Educational Institution") : "Student"),
+
+      // Automatically create appropriate profile record
+      ...(role === "TRAINER" && {
+        trainerProfile: {
+          create: {
+            experience: 0,
+            skills: [],
+            location: "Not specified",
+            bio: organization ? `Expertise in ${organization}` : "Experienced trainer ready to share knowledge.",
+          },
+        },
+      }),
+      ...(role === "INSTITUTION" && {
+        institutionProfile: {
+          create: {
+            name: organization || normalizedEmail.split("@")[0],
+            location: "Not specified",
+          },
+        },
+      }),
+      ...(role === "STUDENT" && {
+        studentProfile: {
+          create: {
+            bio: "Aspiring student.",
+          },
+        },
+      }),
     },
     select: {
       id: true,
       email: true,
       role: true,
+      firstName: true,
+      lastName: true,
+      profilePicture: true,
+      headline: true,
       createdAt: true,
     },
   });
+
 
   const token = jwt.sign(
     {
@@ -66,9 +101,6 @@ export const signupService = async ({ email, password, role }) => {
     "Role:",
     createdUser.role,
   );
-  console.log("JWT_SECRET set:", process.env.JWT_SECRET ? "YES" : "NO");
-  console.log("JWT_ISSUER:", process.env.JWT_ISSUER);
-  console.log("JWT_AUDIENCE:", process.env.JWT_AUDIENCE);
 
   return {
     token,
@@ -76,10 +108,15 @@ export const signupService = async ({ email, password, role }) => {
       id: createdUser.id,
       email: createdUser.email,
       role: createdUser.role,
+      firstName: createdUser.firstName,
+      lastName: createdUser.lastName,
+      profilePicture: createdUser.profilePicture,
+      headline: createdUser.headline,
       createdAt: createdUser.createdAt,
     },
   };
 };
+
 
 // ================= LOGIN SERVICE =================
 export const loginService = async ({ email, password }) => {
@@ -103,7 +140,7 @@ export const loginService = async ({ email, password }) => {
     throw new AppError("Account inactive", 403);
   }
 
-  if (user.isSuspended) {
+  if (!user.isActive) {
     throw new AppError("Account suspended", 403);
   }
 
@@ -139,6 +176,12 @@ export const loginService = async ({ email, password }) => {
       id: user.id,
       email: user.email,
       role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profilePicture: user.profilePicture,
+      headline: user.headline,
+      location: user.location,
+      createdAt: user.createdAt,
     },
   };
 };

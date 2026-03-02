@@ -1,9 +1,11 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -18,11 +20,12 @@ import materialRoutes from "./modules/materials/material.routes.js";
 import materialRatingRoutes from "./modules/materialRating/materialRating.routes.js";
 import reportRoutes from "./modules/report/report.routes.js";
 import simpleUploadRoutes from "./modules/uploads/simple-upload.routes.js";
+import networkingRoutes from "./modules/networking/networking.routes.js";
+import messagingRoutes from "./modules/messaging/messaging.routes.js";
+import userRoutes from "./modules/auth/user.routes.js";
 
 import { errorHandler } from "./middleware/error.middleware.js";
 import { auditMiddleware } from "./middleware/audit.middleware.js";
-
-dotenv.config();
 
 const app = express();
 
@@ -106,6 +109,9 @@ app.use("/api/v1/material", materialRoutes);
 app.use("/api/v1/material-rating", materialRatingRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/upload", simpleUploadRoutes);
+app.use("/api/v1/networking", networkingRoutes);
+app.use("/api/v1/messaging", messagingRoutes);
+app.use("/api/v1/users", userRoutes);
 
 // Legacy routes (backward compatibility)
 app.use("/api/auth", authRoutes);

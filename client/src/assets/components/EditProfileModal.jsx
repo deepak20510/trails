@@ -42,39 +42,31 @@ export default function EditProfileModal({ isOpen, onClose, userType, profileDat
     setError(null);
 
     try {
-      // Prepare data for API call
-      const updateData = {
-        name: formData.name,
-        headline: formData.headline,
-        location: formData.location,
-        avatar: formData.avatar,
-        skills: formData.skills || [],
-      };
+      // Split name for backend
+      let firstName = formData.name;
+      let lastName = "";
 
-      // Call API to save profile
-      const response = await ApiService.updateTrainerProfile(updateData);
+      if (!isInstitute && formData.name.includes(" ")) {
+        const parts = formData.name.split(" ");
+        firstName = parts[0];
+        lastName = parts.slice(1).join(" ");
+      }
+
+      // Call API to save profile (using general endpoint)
+      const response = await ApiService.updateGeneralProfile({
+        ...formData,
+        firstName,
+        lastName,
+        profilePicture: formData.avatar, // map for backend
+      });
 
       if (response.success) {
-        // Pass back the saved data along with the form data
-        onSave({
-          ...formData,
-          // Override with API response data if available
-          ...(response.data?.user && {
-            name: response.data.user.firstName 
-              ? `${response.data.user.firstName} ${response.data.user.lastName || ""}`.trim()
-              : formData.name,
-            avatar: response.data.user.profilePicture || formData.avatar,
-          }),
-          ...(response.data?.profile && {
-            headline: response.data.profile.bio || formData.headline,
-            location: response.data.profile.location || formData.location,
-            skills: response.data.profile.skills || formData.skills,
-          }),
-        });
+        onSave(response.data);
         onClose();
       } else {
         setError(response.message || "Failed to save profile");
       }
+
     } catch (err) {
       setError(err.message || "Failed to save profile. Please try again.");
       console.error("Profile save error:", err);

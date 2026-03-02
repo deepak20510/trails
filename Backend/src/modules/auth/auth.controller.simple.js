@@ -1,4 +1,5 @@
 import { signupService, loginService } from "./auth.service.js";
+import prisma from "../../db.js";
 
 // ================= SIMPLE SIGNUP CONTROLLER =================
 export const signup = async (req, res, next) => {
@@ -6,7 +7,7 @@ export const signup = async (req, res, next) => {
     console.log("Simple signup - request body:", req.body);
 
     // Direct validation without complex schema
-    const { email, password, role } = req.body;
+    const { email, password, role, phone, organization } = req.body;
 
     if (!email || !password || !role) {
       return res.status(400).json({
@@ -32,7 +33,10 @@ export const signup = async (req, res, next) => {
       email,
       password,
       role: normalizedRole,
+      phone,
+      organization
     });
+
 
     res.status(201).json({
       success: true,
@@ -40,8 +44,8 @@ export const signup = async (req, res, next) => {
       data: result,
     });
   } catch (err) {
-    console.error("Simple signup error:", err.message);
-    res.status(400).json({
+    console.error("Simple signup error:", err);
+    res.status(err.statusCode || 400).json({
       success: false,
       message: err.message || "Signup failed",
     });
@@ -72,8 +76,8 @@ export const login = async (req, res, next) => {
       data: result,
     });
   } catch (err) {
-    console.error("Simple login error:", err.message);
-    res.status(400).json({
+    console.error("Simple login error:", err);
+    res.status(err.statusCode || 400).json({
       success: false,
       message: err.message || "Login failed",
     });
