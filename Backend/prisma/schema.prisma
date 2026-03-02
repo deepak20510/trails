@@ -68,6 +68,11 @@ model User {
   auditLogs          AuditLog[]
   posts              Post[]
   postLikes          PostLike[]
+
+  sentConnections     Connection[]   @relation("SentConnections")
+  receivedConnections Connection[]   @relation("ReceivedConnections")
+  conversations       Conversation[] @relation("UserConversations")
+  messages            Message[]
 }
 
 model TrainerProfile {
@@ -281,6 +286,50 @@ model PostLike {
   @@index([userId])
 }
 
+model Connection {
+  id          String         @id @default(uuid())
+  senderId    String
+  receiverId  String
+  status      RequestStatus  @default(PENDING)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  sender   User @relation("SentConnections", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedConnections", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  participants User[]    @relation("UserConversations")
+  messages     Message[]
+
+  @@index([updatedAt])
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  sender       User         @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
 model AuditLog {
   id        String   @id @default(uuid())
   userId    String?
@@ -298,3 +347,4 @@ model AuditLog {
   @@index([resource])
   @@index([createdAt])
 }
+
