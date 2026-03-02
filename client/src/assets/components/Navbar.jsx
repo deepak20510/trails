@@ -20,11 +20,15 @@ import {
   ChevronDown,
   Star,
   Home,
+  Compass,
 } from "lucide-react";
 import { DASHBOARD_CONFIG, USER_TYPES } from "../../config/dashboardConfig";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import NotificationBell from "../../components/NotificationBell";
+import MessagingPanel from "../../components/MessagingPanel";
+import DiscoveryPanel from "../../components/DiscoveryPanel";
 
 const ICON_MAP = {
   Users,
@@ -51,6 +55,8 @@ export default function Navbar({ userType = USER_TYPES.STUDENT }) {
   const [activeItem, setActiveItem] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [showDiscovery, setShowDiscovery] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const userMenuRef = useRef(null);
 
@@ -70,10 +76,14 @@ export default function Navbar({ userType = USER_TYPES.STUDENT }) {
     setActiveItem(item.id);
     // Route specific nav items
     if (item.id === "messaging") {
-      // Could navigate to messaging tab
+      setShowMessaging(true);
     } else if (item.id === "notifications") {
       setShowNotifications(!showNotifications);
     }
+  };
+
+  const handleSearchClick = () => {
+    setShowDiscovery(true);
   };
 
   const handleLogout = () => {
@@ -121,13 +131,18 @@ export default function Navbar({ userType = USER_TYPES.STUDENT }) {
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onClick={handleSearchClick}
             placeholder="Search trainers, courses, institutes..."
-            className={`${theme.inputBg} border ${theme.inputBorder} pl-10 pr-4 py-2 rounded-full w-full outline-none text-sm ${theme.inputText} ${theme.inputPlaceholder} focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all duration-300`}
+            className={`${theme.inputBg} border ${theme.inputBorder} pl-10 pr-4 py-2 rounded-full w-full outline-none text-sm ${theme.inputText} ${theme.inputPlaceholder} focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all duration-300 cursor-pointer`}
+            readOnly
           />
         </div>
 
         {/* Right Side */}
         <div className="flex items-center gap-1">
+          {/* Quick Actions - Removed, using navbar items instead */}
+          <NotificationBell />
+
           {/* Nav Items */}
           <nav className="flex items-center gap-1">
             {navItems.map((item) => {
@@ -144,9 +159,6 @@ export default function Navbar({ userType = USER_TYPES.STUDENT }) {
                 >
                   <div className="relative">
                     <IconComponent size={20} />
-                    {item.id === "notifications" && (
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                    )}
                   </div>
                   <span className="text-[10px] font-medium whitespace-nowrap">{item.label}</span>
                 </button>
@@ -258,6 +270,10 @@ export default function Navbar({ userType = USER_TYPES.STUDENT }) {
           </div>
         </div>
       </div>
+
+      {/* Panels */}
+      <MessagingPanel isOpen={showMessaging} onClose={() => setShowMessaging(false)} />
+      <DiscoveryPanel isOpen={showDiscovery} onClose={() => setShowDiscovery(false)} />
     </header>
   );
 }

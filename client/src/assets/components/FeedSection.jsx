@@ -76,6 +76,14 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
               ? post.imageUrl
               : `${BACKEND_URL}${post.imageUrl}`
             : null,
+          author: post.author ? {
+            ...post.author,
+            profilePicture: post.author.profilePicture
+              ? post.author.profilePicture.startsWith("http")
+                ? post.author.profilePicture
+                : `${BACKEND_URL}${post.author.profilePicture}`
+              : null,
+          } : null,
         }));
 
         setPosts(normalizedPosts);
@@ -332,6 +340,21 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
 
   // ================= POST INTERACTIONS =================
 
+  const handleReviewUpdate = (postId, reviewData) => {
+    // Optimistically update the specific post without full refresh
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId
+          ? { 
+              ...post, 
+              averageRating: reviewData.averageRating,
+              totalReviews: reviewData.totalReviews 
+            }
+          : post
+      )
+    );
+  };
+
   const handleLike = async (postId) => {
     try {
       const isLiked = likedPosts.has(postId);
@@ -552,6 +575,7 @@ export default function FeedSection({ userType = USER_TYPES.STUDENT }) {
                 [post.id]: !prev[post.id],
               }))
             }
+            onReviewUpdate={handleReviewUpdate}
           />
         ))
       )}

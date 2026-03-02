@@ -111,11 +111,35 @@ class ApiService {
   }
 
   static async likePost(postId) {
-    return this.request(`/posts/${postId}/like`, { method: "POST" });
+    return this.request(`/posts/${postId}/review`, { method: "POST", body: JSON.stringify({ rating: 5 }) });
   }
 
   static async unlikePost(postId) {
-    return this.request(`/posts/${postId}/like`, { method: "DELETE" });
+    return this.request(`/posts/${postId}/review`, { method: "DELETE" });
+  }
+
+  static async reviewPost(postId, rating, review) {
+    return this.request(`/posts/${postId}/review`, {
+      method: "POST",
+      body: JSON.stringify({ rating, review }),
+    });
+  }
+
+  static async updatePostReview(reviewId, rating, review) {
+    return this.request(`/posts/review/${reviewId}`, {
+      method: "PUT",
+      body: JSON.stringify({ rating, review }),
+    });
+  }
+
+  static async deletePostReview(reviewId) {
+    return this.request(`/posts/review/${reviewId}`, {
+      method: "DELETE",
+    });
+  }
+
+  static async getPostReviews(postId) {
+    return this.request(`/posts/${postId}/reviews`);
   }
 
   static async getRequests(filters = {}) {
@@ -359,10 +383,10 @@ class ApiService {
 
   /* ================= MESSAGING ================= */
 
-  static async getOrCreateConversation(participantId) {
+  static async createConversation(data) {
     return this.request("/messaging/conversation", {
       method: "POST",
-      body: JSON.stringify({ participantId })
+      body: JSON.stringify(data)
     });
   }
 
@@ -370,10 +394,10 @@ class ApiService {
     return this.request("/messaging/conversations");
   }
 
-  static async sendMessage(conversationId, content) {
+  static async sendMessage(data) {
     return this.request("/messaging/send", {
       method: "POST",
-      body: JSON.stringify({ conversationId, content })
+      body: JSON.stringify(data)
     });
   }
 
@@ -381,8 +405,27 @@ class ApiService {
     return this.request(`/messaging/${conversationId}/messages`);
   }
 
-  static async markAsRead(conversationId) {
+  static async markMessagesAsRead(conversationId) {
     return this.request(`/messaging/read/${conversationId}`, { method: "PATCH" });
+  }
+
+  /* ================= NOTIFICATIONS ================= */
+
+  static async getNotifications(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/notifications${query ? `?${query}` : ""}`);
+  }
+
+  static async markNotificationAsRead(notificationId) {
+    return this.request(`/notifications/${notificationId}/read`, { method: "PATCH" });
+  }
+
+  static async markAllNotificationsAsRead() {
+    return this.request("/notifications/read-all", { method: "PATCH" });
+  }
+
+  static async deleteNotification(notificationId) {
+    return this.request(`/notifications/${notificationId}`, { method: "DELETE" });
   }
 
   /* ================= OPTIONAL (not in backend - return empty to avoid errors) ================= */

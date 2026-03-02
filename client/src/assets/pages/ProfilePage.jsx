@@ -84,7 +84,7 @@ export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
       }
 
       if (response.success) {
-        // Normalize image URLs
+        // Normalize image URLs and profile pictures
         const normalizedPosts = (response.data || []).map((post) => ({
           ...post,
           imageUrl: post.imageUrl
@@ -92,6 +92,14 @@ export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
               ? post.imageUrl
               : `${BACKEND_URL}${post.imageUrl}`
             : null,
+          author: post.author ? {
+            ...post.author,
+            profilePicture: post.author.profilePicture
+              ? post.author.profilePicture.startsWith("http")
+                ? post.author.profilePicture
+                : `${BACKEND_URL}${post.author.profilePicture}`
+              : null,
+          } : null,
         }));
         setPosts(normalizedPosts);
       }
@@ -140,6 +148,21 @@ export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
 
   const handleEditPost = (post) => {
     console.log("Edit post:", post);
+  };
+
+  const handleReviewUpdate = (postId, reviewData) => {
+    // Optimistically update the specific post without full refresh
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId
+          ? { 
+              ...post, 
+              averageRating: reviewData.averageRating,
+              totalReviews: reviewData.totalReviews 
+            }
+          : post
+      )
+    );
   };
 
   // Profile data mapped from backend fields
@@ -592,6 +615,7 @@ export default function ProfilePage({ userType = USER_TYPES.STUDENT }) {
                         onDelete={handleDeletePost}
                         onEdit={handleEditPost}
                         isOwnProfile={isOwnProfile} // True if viewing own profile, false if viewing other trainer's profile
+                        onReviewUpdate={handleReviewUpdate}
                       />
                     ))}
                   </div>

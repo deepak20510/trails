@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createServer } from "http";
+import { initializeSocket } from "./socket/socket.js";
 
 dotenv.config();
 
@@ -16,6 +18,11 @@ try {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// Create HTTP server and initialize Socket.io
+const server = createServer(app);
+initializeSocket(server);
+
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 Socket.io initialized`);
 });

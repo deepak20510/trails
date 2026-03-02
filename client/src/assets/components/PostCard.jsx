@@ -12,8 +12,12 @@ import {
   Edit,
   Trash2,
   Globe,
+  Star,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import ReviewModal from "../../components/ReviewModal";
+import ReviewsListModal from "../../components/ReviewsListModal";
+import ApiService from "../../services/api";
 
 export default function PostCard({
   post,
@@ -31,10 +35,53 @@ export default function PostCard({
   onDelete,
   onEdit,
   isOwnProfile = false,
+  onReviewUpdate,
 }) {
   const { theme } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [userReview, setUserReview] = useState(null);
+  const [allReviews, setAllReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+
+  const handleReviewSubmit = async (rating, review) => {
+    try {
+      const response = await ApiService.reviewPost(post.id, rating, review);
+      
+      // Optimistically update the post data without full refresh
+      if (response.success && response.data) {
+        const { averageRating, totalReviews } = response.data;
+        // Update parent component's post data
+        onReviewUpdate?.(post.id, { averageRating, totalReviews });
+      }
+      
+      // Reload reviews if modal is open
+      if (showReviewsModal) {
+        loadReviews();
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const loadReviews = async () => {
+    try {
+      setLoadingReviews(true);
+      const response = await ApiService.getPostReviews(post.id);
+      setAllReviews(response.data || []);
+    } catch (error) {
+      console.error("Failed to load reviews:", error);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const handleShowReviews = () => {
+    setShowReviewsModal(true);
+    loadReviews();
+  };
 
   const formatTimeAgo = (dateString) => {
     if (!dateString) return "Just now";
@@ -85,7 +132,23 @@ export default function PostCard({
   const isPDF = post.imageUrl?.toLowerCase().endsWith(".pdf") || post.type === "article";
 
   return (
-    <div className={`${theme.cardBg} rounded-xl shadow-sm border ${theme.cardBorder} overflow-hidden hover:shadow-md transition-all duration-200`}>
+    <>
+      <div className={`${theme.cardBg} rounded-xl shadow-sm border ${theme.cardBorder} overflow-hidden hover:shadow-md transition-all duration-200 relative`}>
+        {/* Rating Badge - Top Right */}
+        {(post.averageRating > 0 || post.totalReviews > 0) && (
+          <div className="absolute top-4 right-4 z-10">
+            <button 
+              onClick={handleShowReviews}
+              className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer"
+            >
+              <Star className="w-4 h-4 fill-current" />
+              <span className="font-bold text-sm">
+                {post.averageRating > 0 ? post.averageRating.toFixed(1) : '0.0'}
+              </span>
+              <span className="text-xs opacity-90">({post.totalReviews || 0})</span>
+            </button>
+          </div>
+        )}
       {/* Post Header */}
       <div className="p-4">
         <div className="flex items-start justify-between">
@@ -218,20 +281,20 @@ export default function PostCard({
       )}
 
       {/* Engagement Stats */}
-      {(post.likes > 0 || post.commentCount > 0 || post.shares > 0) && (
+      {(post.averageRating > 0 || post.totalReviews > 0 || post.shares > 0) && (
         <div className={`px-4 py-2 border-t ${theme.divider} flex items-center justify-between`}>
           <div className={`flex items-center gap-3 text-xs ${theme.textMuted}`}>
-            {post.likes > 0 && (
-              <button onClick={onToggleComments} className="flex items-center gap-1 hover:underline">
-                <span className="text-blue-500">👍</span>
-                <span>{post.likes}</span>
+            {post.averageRating > 0 && (
+              <button onClick={handleShowReviews} className="flex items-center gap-1 hover:underline">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <span className="font-semibold">{post.averageRating.toFixed(1)}</span>
               </button>
             )}
           </div>
           <div className={`flex items-center gap-3 text-xs ${theme.textMuted}`}>
-            {post.commentCount > 0 && (
-              <button onClick={onToggleComments} className="hover:underline">
-                {post.commentCount} comments
+            {post.totalReviews > 0 && (
+              <button onClick={handleShowReviews} className="hover:underline">
+                {post.totalReviews} review{post.totalReviews !== 1 ? 's' : ''}
               </button>
             )}
             {post.shares > 0 && (
@@ -245,22 +308,11 @@ export default function PostCard({
       <div className={`px-2 py-1 border-t ${theme.divider}`}>
         <div className="flex items-center justify-around">
           <button
-            onClick={onLike}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-sm font-medium group ${isLiked
-                ? "text-blue-500 bg-blue-500/10"
-                : `${theme.textSecondary} ${theme.hoverBg} ${theme.hoverText}`
-              }`}
+            onClick={() => setShowReviewModal(true)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-sm font-medium group ${theme.textSecondary} ${theme.hoverBg} ${theme.hoverText}`}
           >
-            <ThumbsUp className={`w-4 h-4 transition-transform group-hover:scale-110 ${isLiked ? "fill-current" : ""}`} />
-            <span>Like</span>
-          </button>
-
-          <button
-            onClick={onToggleComments}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${theme.textSecondary} ${theme.hoverBg} ${theme.hoverText} group`}
-          >
-            <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-            <span>Comment</span>
+            <Star className={`w-4 h-4 transition-transform group-hover:scale-110`} />
+            <span>Rate</span>
           </button>
 
           <button
@@ -347,5 +399,28 @@ export default function PostCard({
         </div>
       )}
     </div>
+
+    {/* Review Modal */}
+    <ReviewModal
+      isOpen={showReviewModal}
+      onClose={() => setShowReviewModal(false)}
+      onSubmit={handleReviewSubmit}
+      existingReview={userReview}
+    />
+
+    {/* Reviews List Modal */}
+    <ReviewsListModal
+      isOpen={showReviewsModal}
+      onClose={() => setShowReviewsModal(false)}
+      reviews={allReviews}
+      loading={loadingReviews}
+      averageRating={post.averageRating}
+      totalReviews={post.totalReviews}
+      onAddReview={() => {
+        setShowReviewsModal(false);
+        setShowReviewModal(true);
+      }}
+    />
+  </>
   );
 }

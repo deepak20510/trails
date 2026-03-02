@@ -5,8 +5,10 @@ import {
   getPostById,
   updatePost,
   deletePost,
-  likePost,
-  unlikePost,
+  reviewPost,
+  updateReview,
+  deleteReview,
+  getPostReviews,
   getMyPosts,
 } from "./posts.controller.js";
 
@@ -31,6 +33,7 @@ router.get(
 // Public routes
 router.get("/", validate(getPostsSchema, "query"), getPosts);
 router.get("/:postId", getPostById);
+router.get("/:postId/reviews", getPostReviews);
 
 // Protected routes - trainers and institutions only
 router.post(
@@ -46,7 +49,10 @@ router.put(
   updatePost,
 );
 router.delete("/:postId", authMiddleware(["TRAINER", "INSTITUTION", "STUDENT", "ADMIN"]), deletePost);
-router.post("/:postId/like", authMiddleware(["TRAINER", "INSTITUTION", "STUDENT"]), likePost);
-router.delete("/:postId/like", authMiddleware(["TRAINER", "INSTITUTION", "STUDENT"]), unlikePost);
+
+// Review routes
+router.post("/:postId/review", authMiddleware(["TRAINER", "INSTITUTION", "STUDENT"]), reviewPost);
+router.put("/review/:reviewId", authMiddleware(["TRAINER", "INSTITUTION", "STUDENT"]), updateReview);
+router.delete("/review/:reviewId", authMiddleware(["TRAINER", "INSTITUTION", "STUDENT"]), deleteReview);
 
 export default router;

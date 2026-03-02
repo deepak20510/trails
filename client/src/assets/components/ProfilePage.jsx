@@ -218,7 +218,7 @@ function PostsTab() {
       setLoading(true);
       const response = await ApiService.getMyPosts({ page: 1, limit: 10 });
       if (response.success) {
-        // Normalize image URLs like FeedSection does
+        // Normalize image URLs and profile pictures
         const normalizedPosts = (response.data || []).map((post) => ({
           ...post,
           imageUrl: post.imageUrl
@@ -226,6 +226,14 @@ function PostsTab() {
               ? post.imageUrl
               : `${BACKEND_URL}${post.imageUrl}`
             : null,
+          author: post.author ? {
+            ...post.author,
+            profilePicture: post.author.profilePicture
+              ? post.author.profilePicture.startsWith("http")
+                ? post.author.profilePicture
+                : `${BACKEND_URL}${post.author.profilePicture}`
+              : null,
+          } : null,
         }));
         setPosts(normalizedPosts);
       } else {
@@ -246,6 +254,21 @@ function PostsTab() {
   const handleEditPost = (post) => {
     // TODO: Implement edit functionality
     console.log("Edit post:", post);
+  };
+
+  const handleReviewUpdate = (postId, reviewData) => {
+    // Optimistically update the specific post without full refresh
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId
+          ? { 
+              ...post, 
+              averageRating: reviewData.averageRating,
+              totalReviews: reviewData.totalReviews 
+            }
+          : post
+      )
+    );
   };
 
   if (loading) {
@@ -305,6 +328,7 @@ function PostsTab() {
               onDelete={handleDeletePost}
               onEdit={handleEditPost}
               isOwnProfile={true}
+              onReviewUpdate={handleReviewUpdate}
             />
           ))}
         </div>

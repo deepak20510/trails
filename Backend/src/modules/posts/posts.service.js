@@ -19,8 +19,8 @@ export const createPostService = async (postData) => {
       imageUrl: postData.imageUrl || null,
       videoUrl: postData.videoUrl || null,
       tags: postData.tags || [],
-      likes: 0,
-      comments: 0,
+      averageRating: 0,
+      totalReviews: 0,
       shares: 0,
       isActive: true,
     },
@@ -53,6 +53,7 @@ export const getPostsService = async (filters = {}) => {
           firstName: true,
           lastName: true,
           role: true,
+          profilePicture: true,
           trainerProfile: {
             select: {
               bio: true,
@@ -63,6 +64,11 @@ export const getPostsService = async (filters = {}) => {
               name: true,
             },
           },
+        },
+      },
+      _count: {
+        select: {
+          postReviews: true,
         },
       },
     },
@@ -110,6 +116,7 @@ export const getMyPostsService = async (userId, filters = {}) => {
           firstName: true,
           lastName: true,
           role: true,
+          profilePicture: true,
           trainerProfile: {
             select: {
               bio: true,
@@ -120,6 +127,11 @@ export const getMyPostsService = async (userId, filters = {}) => {
               name: true,
             },
           },
+        },
+      },
+      _count: {
+        select: {
+          postReviews: true,
         },
       },
     },
@@ -177,7 +189,7 @@ export const getPostByIdService = async (postId) => {
       },
       _count: {
         select: {
-          postLikes: true,
+          postReviews: true,
         },
       },
     },
@@ -240,9 +252,9 @@ export const deletePostService = async (postId, userId) => {
   });
 };
 
-/* ================= LIKE POST ================= */
+/* ================= REVIEW POST ================= */
 
-export const likePostService = async (postId, userId) => {
+export const reviewPostService = async (postId, userId, rating, review) => {
   const post = await client.post.findFirst({
     where: { id: postId, isActive: true },
   });
@@ -251,51 +263,149 @@ export const likePostService = async (postId, userId) => {
     throw new Error("Post not found");
   }
 
-  const existingLike = await client.postLike.findUnique({
+  // Check if user already reviewed
+  const existingReview = await client.postReview.findUnique({
     where: {
       postId_userId: { postId, userId },
     },
   });
 
-  if (existingLike) {
-    throw new Error("You already liked this post");
+  let postReview;
+  if (existingReview) {
+    // Update existing review
+    postReview = await client.postReview.update({
+      where: { id: existingReview.id },
+      data: { rating, review, updatedAt: new Date() },
+    });
+  } else {
+    // Create new review
+    postReview = await client.postReview.create({
+      data: { postId, userId, rating, review },
+    });
   }
 
-  await client.postLike.create({
-    data: { postId, userId },
+  // Recalculate average rating
+  const reviews = await client.postReview.findMany({
+    where: { postId },
+    select: { rating: true },
   });
 
-  return client.post.update({
+  const averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const totalReviews = reviews.length;
+
+  // Update post with new average
+  await client.post.update({
     where: { id: postId },
     data: {
-      likes: { increment: 1 },
+      averageRating: parseFloat(averageRating.toFixed(2)),
+      totalReviews,
     },
   });
+
+  return { postReview, averageRating, totalReviews };
 };
 
-/* ================= UNLIKE POST ================= */
+/* ================= UPDATE REVIEW ================= */
 
-export const unlikePostService = async (postId, userId) => {
-  const existingLike = await client.postLike.findUnique({
-    where: {
-      postId_userId: { postId, userId },
-    },
+export const updateReviewService = async (reviewId, userId, rating, review) => {
+  const existingReview = await client.postReview.findUnique({
+    where: { id: reviewId },
   });
 
-  if (!existingLike) {
-    throw new Error("You have not liked this post");
+  if (!existingReview) {
+    throw new Error("Review not found");
   }
 
-  await client.postLike.delete({
-    where: {
-      postId_userId: { postId, userId },
+  if (existingReview.userId !== userId) {
+    throw new Error("Not authorized to update this review");
+  }
+
+  const updatedReview = await client.postReview.update({
+    where: { id: reviewId },
+    data: {
+      ...(rating && { rating }),
+      ...(review !== undefined && { review }),
+      updatedAt: new Date(),
     },
   });
 
-  return client.post.update({
-    where: { id: postId },
+  // Recalculate average rating
+  const reviews = await client.postReview.findMany({
+    where: { postId: existingReview.postId },
+    select: { rating: true },
+  });
+
+  const averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+
+  await client.post.update({
+    where: { id: existingReview.postId },
     data: {
-      likes: { decrement: 1 },
+      averageRating: parseFloat(averageRating.toFixed(2)),
     },
   });
+
+  return updatedReview;
+};
+
+/* ================= DELETE REVIEW ================= */
+
+export const deleteReviewService = async (reviewId, userId) => {
+  const existingReview = await client.postReview.findUnique({
+    where: { id: reviewId },
+  });
+
+  if (!existingReview) {
+    throw new Error("Review not found");
+  }
+
+  if (existingReview.userId !== userId) {
+    throw new Error("Not authorized to delete this review");
+  }
+
+  await client.postReview.delete({
+    where: { id: reviewId },
+  });
+
+  // Recalculate average rating
+  const reviews = await client.postReview.findMany({
+    where: { postId: existingReview.postId },
+    select: { rating: true },
+  });
+
+  const averageRating = reviews.length > 0 
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
+    : 0;
+  const totalReviews = reviews.length;
+
+  await client.post.update({
+    where: { id: existingReview.postId },
+    data: {
+      averageRating: parseFloat(averageRating.toFixed(2)),
+      totalReviews,
+    },
+  });
+
+  return { message: "Review deleted successfully" };
+};
+
+/* ================= GET POST REVIEWS ================= */
+
+export const getPostReviewsService = async (postId) => {
+  const reviews = await client.postReview.findMany({
+    where: { postId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          profilePicture: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return reviews;
 };

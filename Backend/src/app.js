@@ -23,6 +23,8 @@ import simpleUploadRoutes from "./modules/uploads/simple-upload.routes.js";
 import networkingRoutes from "./modules/networking/networking.routes.js";
 import messagingRoutes from "./modules/messaging/messaging.routes.js";
 import userRoutes from "./modules/auth/user.routes.js";
+import notificationRoutes from "./modules/notifications/notification.routes.js";
+import discoveryRoutes from "./modules/discovery/discovery.routes.js";
 
 import { errorHandler } from "./middleware/error.middleware.js";
 import { auditMiddleware } from "./middleware/audit.middleware.js";
@@ -112,6 +114,8 @@ app.use("/api/v1/upload", simpleUploadRoutes);
 app.use("/api/v1/networking", networkingRoutes);
 app.use("/api/v1/messaging", messagingRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/discovery", discoveryRoutes);
 
 // Legacy routes (backward compatibility)
 app.use("/api/auth", authRoutes);

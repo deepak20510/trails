@@ -4,8 +4,10 @@ import {
   getPostByIdService,
   updatePostService,
   deletePostService,
-  likePostService,
-  unlikePostService,
+  reviewPostService,
+  updateReviewService,
+  deleteReviewService,
+  getPostReviewsService,
   getMyPostsService,
 } from "./posts.service.js";
 
@@ -195,21 +197,32 @@ export const deletePost = async (req, res) => {
   }
 };
 
-// Like
-export const likePost = async (req, res) => {
+// Review Post (Create or Update)
+export const reviewPost = async (req, res) => {
   try {
-    const updatedPost = await likePostService(
+    const { rating, review } = req.body;
+    
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be between 1 and 5",
+      });
+    }
+
+    const result = await reviewPostService(
       req.params.postId,
       req.user.userId,
+      rating,
+      review
     );
 
     res.status(200).json({
       success: true,
-      message: "Post liked successfully",
-      data: updatedPost,
+      message: "Post reviewed successfully",
+      data: result,
     });
   } catch (error) {
-    console.error("Like post error:", error);
+    console.error("Review post error:", error);
 
     res.status(400).json({
       success: false,
@@ -218,25 +231,75 @@ export const likePost = async (req, res) => {
   }
 };
 
-// Unlike
-export const unlikePost = async (req, res) => {
+// Update Review
+export const updateReview = async (req, res) => {
   try {
-    const updatedPost = await unlikePostService(
-      req.params.postId,
+    const { rating, review } = req.body;
+    
+    if (rating && (rating < 1 || rating > 5)) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be between 1 and 5",
+      });
+    }
+
+    const result = await updateReviewService(
+      req.params.reviewId,
       req.user.userId,
+      rating,
+      review
     );
 
     res.status(200).json({
       success: true,
-      message: "Post unliked successfully",
-      data: updatedPost,
+      message: "Review updated successfully",
+      data: result,
     });
   } catch (error) {
-    console.error("Unlike post error:", error);
+    console.error("Update review error:", error);
 
     res.status(400).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+// Delete Review
+export const deleteReview = async (req, res) => {
+  try {
+    await deleteReviewService(req.params.reviewId, req.user.userId);
+
+    res.status(200).json({
+      success: true,
+      message: "Review deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete review error:", error);
+
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Get Post Reviews
+export const getPostReviews = async (req, res) => {
+  try {
+    const reviews = await getPostReviewsService(req.params.postId);
+
+    res.status(200).json({
+      success: true,
+      message: "Reviews retrieved successfully",
+      data: reviews,
+    });
+  } catch (error) {
+    console.error("Get reviews error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to retrieve reviews",
     });
   }
 };

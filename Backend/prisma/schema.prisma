@@ -66,7 +66,7 @@ model User {
   reports            Report[]
   auditLogs          AuditLog[]
   posts              Post[]
-  postLikes          PostLike[]
+  postReviews        PostReview[]
   education          Education[]
   experience         Experience[]
 
@@ -297,35 +297,39 @@ model Report {
 }
 
 model Post {
-  id        String    @id @default(uuid())
-  content   String
-  type      String    @default("text")
-  imageUrl  String?
-  videoUrl  String?
-  tags      String[]
-  likes     Int       @default(0)
-  comments  Int       @default(0)
-  shares    Int       @default(0)
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  id            String    @id @default(uuid())
+  content       String
+  type          String    @default("text")
+  imageUrl      String?
+  videoUrl      String?
+  tags          String[]
+  averageRating Float     @default(0)
+  totalReviews  Int       @default(0)
+  shares        Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
 
-  authorId  String
-  author    User       @relation(fields: [authorId], references: [id])
-  postLikes PostLike[]
+  authorId    String
+  author      User         @relation(fields: [authorId], references: [id])
+  postReviews PostReview[]
 
   @@index([authorId])
   @@index([isActive])
   @@index([createdAt])
   @@index([type])
+  @@index([averageRating])
 }
 
-model PostLike {
+model PostReview {
   id        String   @id @default(uuid())
   postId    String
   userId    String
+  rating    Int      // 1-5 stars
+  review    String?  // Optional review text
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -333,6 +337,7 @@ model PostLike {
   @@unique([postId, userId])
   @@index([postId])
   @@index([userId])
+  @@index([rating])
 }
 
 model Connection {
@@ -376,6 +381,21 @@ model Message {
 
   @@index([conversationId])
   @@index([senderId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // MESSAGE, REQUEST, REVIEW, CONNECTION, etc.
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
   @@index([createdAt])
 }
 
